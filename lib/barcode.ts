@@ -10,11 +10,22 @@
 
 const FORMATS = ["upc_a", "upc_e", "ean_13", "ean_8", "code_128"] as const;
 
+/**
+ * Enough resolution that a barcode filling a third of the frame still has
+ * several pixels per module, while keeping the pure-JS decoder responsive.
+ */
+const DECODE_MAX_EDGE = 1280;
+
+/** Which decoder is running — surfaced in the UI, because "nothing happens" is
+ * otherwise impossible to tell apart from "the decoder never loaded". */
+export type ScannerKind = "native" | "zxing";
+
 type NativeDetector = {
   detect(source: CanvasImageSource): Promise<Array<{ rawValue: string }>>;
 };
 
 export type Scanner = {
+  kind: ScannerKind;
   /** Read one frame. Returns a barcode string, or null if nothing was found. */
   scan(video: HTMLVideoElement): Promise<string | null>;
   stop(): void;
@@ -55,6 +66,7 @@ async function createNativeScanner(): Promise<Scanner | null> {
   }
 
   return {
+    kind: "native",
     async scan(video) {
       if (!video.videoWidth) return null;
       try {
@@ -86,27 +98,21 @@ async function createZxingScanner(): Promise<Scanner> {
   const canvas = document.createElement("canvas");
 
   return {
+    kind: "zxing",
     async scan(video) {
       if (!video.videoWidth) return null;
-      // Decode a centre crop: it is where the barcode is, and the smaller
-      // bitmap keeps the pure-JS decoder fast enough for a live preview.
-      const cropWidth = Math.round(video.videoWidth * 0.8);
-      const cropHeight = Math.round(video.videoHeight * 0.5);
-      canvas.width = cropWidth;
-      canvas.height = cropHeight;
+      // Decode the whole frame, downscaled for speed rather than cropped.
+      // A Hot Wheels barcode sits at the very bottom of the card, so any
+      // centre crop misses it exactly when the user has framed the card well.
+      const scale = Math.min(
+        1,
+        DECODE_MAX_EDGE / Math.max(video.videoWidth, video.videoHeight),
+      );
+      canvas.width = Math.round(video.videoWidth * scale);
+      canvas.height = Math.round(video.videoHeight * scale);
       const context = canvas.getContext("2d", { willReadFrequently: true });
       if (!context) return null;
-      context.drawImage(
-        video,
-        Math.round((video.videoWidth - cropWidth) / 2),
-        Math.round((video.videoHeight - cropHeight) / 2),
-        cropWidth,
-        cropHeight,
-        0,
-        0,
-        cropWidth,
-        cropHeight,
-      );
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
       try {
         return reader.decodeFromCanvas(canvas).getText();
       } catch {

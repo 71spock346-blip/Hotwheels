@@ -47,6 +47,7 @@ export default function ScanPage() {
 
   const [status, setStatus] = useState<CameraStatus>("starting");
   const [cameraError, setCameraError] = useState("");
+  const [scannerKind, setScannerKind] = useState<"native" | "zxing" | null>(null);
   const [mode, setMode] = useState<Mode>("confirm");
   const [liveBarcode, setLiveBarcode] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -68,6 +69,17 @@ export default function ScanPage() {
     recentBarcodes.current.set(upc, Date.now() + ms - BARCODE_COOLDOWN_MS);
   }, []);
 
+  /**
+   * The width/height the viewfinder actually shows. The preview is
+   * object-fit: cover, so this is what the user composed — capturing anything
+   * wider would shrink the card in the photo and lose the fine print.
+   */
+  const viewAspect = useCallback((): number | undefined => {
+    const video = videoRef.current;
+    if (!video?.clientHeight) return undefined;
+    return video.clientWidth / video.clientHeight;
+  }, []);
+
   /* ------------------------------------------------------------ camera --- */
 
   useEffect(() => {
@@ -87,6 +99,12 @@ export default function ScanPage() {
             facingMode: { ideal: "environment" },
             width: { ideal: 1920 },
             height: { ideal: 1080 },
+            // Unsupported entries in `advanced` are ignored rather than
+            // failing the request. Autofocus is what makes a barcode and the
+            // fine print on a card readable at arm's length.
+            advanced: [
+              { focusMode: "continuous" },
+            ] as unknown as MediaTrackConstraintSet[],
           },
           audio: false,
         });
@@ -107,8 +125,12 @@ export default function ScanPage() {
           | undefined;
         if (capabilities?.torch) setTorch({ available: true, on: false });
 
-        scannerRef.current = await createScanner();
-        if (!cancelled) setStatus("ready");
+        const scanner = await createScanner();
+        scannerRef.current = scanner;
+        if (!cancelled) {
+          setScannerKind(scanner.kind);
+          setStatus("ready");
+        }
       } catch (error) {
         if (cancelled) return;
         setStatus("error");
@@ -230,7 +252,7 @@ export default function ScanPage() {
       vibrate([20, 40, 20]);
       const video = videoRef.current;
       if (!video) return;
-      await handleCapture(captureFrame(video), upc);
+      await handleCapture(captureFrame(video, { aspect: viewAspect() }), upc);
     },
     [handleCapture, show],
   );
@@ -262,7 +284,7 @@ export default function ScanPage() {
   const onShutter = useCallback(() => {
     const video = videoRef.current;
     if (!video || !video.videoWidth) return;
-    void handleCapture(captureFrame(video), liveBarcode ?? undefined);
+    void handleCapture(captureFrame(video, { aspect: viewAspect() }), liveBarcode ?? undefined);
   }, [handleCapture, liveBarcode]);
 
   const onPickFile = useCallback(
@@ -369,7 +391,7 @@ export default function ScanPage() {
               {busy ? "Reading the card…"
               : liveBarcode ? `Barcode ${liveBarcode}`
               : status === "starting" ? "Starting camera…"
-              : "Fill the frame with the card, or press the shutter"}
+              : "Include the barcode, or just press the shutter"}
             </div>
           </div>
 
@@ -447,7 +469,15 @@ export default function ScanPage() {
           <p className="muted tiny" style={{ marginTop: 14, lineHeight: 1.5 }}>
             A barcode you have scanned before adds instantly. A new one triggers a
             photo, because Hot Wheels mainline cars often share a single barcode
-            across a whole assortment.
+            across a whole assortment. If a barcode will not read, the shutter
+            works on its own — the photo alone is enough to identify a car.
+          </p>
+
+          <p className="muted tiny" style={{ marginTop: 8 }}>
+            Barcode reader:{" "}
+            {scannerKind === "native" ? "built into this browser"
+            : scannerKind === "zxing" ? "ZXing"
+            : "starting…"}
           </p>
         </>
       }
@@ -492,7 +522,7 @@ export default function ScanPage() {
                   const video = videoRef.current;
                   const upc = picker.upc;
                   setPicker(null);
-                  if (video) void handleCapture(captureFrame(video), upc);
+                  if (video) void handleCapture(captureFrame(video, { aspect: viewAspect() }), upc);
                 }}
               >
                 None — identify it
