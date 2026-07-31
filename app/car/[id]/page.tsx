@@ -39,7 +39,17 @@ export default function CarPage() {
       show("Give it a name first.", "bad");
       return;
     }
-    await putCar({ ...car, ...draft, name: draft.name.trim() });
+    try {
+      await putCar({ ...car, ...draft, name: draft.name.trim() });
+    } catch (error) {
+      show(
+        error instanceof Error ?
+          `Could not save: ${error.message}`
+        : "Could not save to this device's storage.",
+        "bad",
+      );
+      return;
+    }
     announceChange();
     show("Saved", "good");
   }

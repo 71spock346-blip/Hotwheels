@@ -462,7 +462,10 @@ a {
   left: 50%;
   bottom: calc(var(--tab-height) + env(safe-area-inset-bottom) + 16px);
   transform: translateX(-50%);
-  z-index: 40;
+  /* Above the sheet backdrop: a toast raised while a sheet is open is usually
+     the reason the sheet did not close, so hiding it behind the sheet makes
+     the app look broken. */
+  z-index: 60;
   display: flex;
   align-items: center;
   gap: 9px;

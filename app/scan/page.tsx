@@ -26,6 +26,8 @@ interface Pending {
   /** Set when identification failed, so the sheet can explain itself. */
   error?: string;
   errorCode?: string;
+  /** Set when a save attempt was rejected, shown next to the save button. */
+  saveError?: string;
 }
 
 const BARCODE_COOLDOWN_MS = 3000;
@@ -57,11 +59,12 @@ export default function ScanPage() {
     available: false,
     on: false,
   });
+  const [typedBarcode, setTypedBarcode] = useState<string | null>(null);
 
   const { toast, show } = useToast();
 
   // A sheet is open, or we are mid-identify: stop reading frames.
-  pausedRef.current = Boolean(pending || picker || busy);
+  pausedRef.current = Boolean(pending || picker || busy || typedBarcode !== null);
 
   /** Hold a barcode off the auto-capture path for a while. */
   const cooldown = useCallback((upc: string | undefined, ms: number) => {
@@ -194,6 +197,7 @@ export default function ScanPage() {
             color: identification.color ?? undefined,
             treasureHunt: identification.treasureHunt,
             notes: identification.notes ?? undefined,
+            upc,
           },
           thumbnail,
           upc,
@@ -208,7 +212,7 @@ export default function ScanPage() {
         // Still let them log it — a blank form beats losing the car entirely.
         const thumbnail = await makeThumbnail(imageDataUrl).catch(() => undefined);
         setPending({
-          draft: { ...BLANK_DRAFT },
+          draft: { ...BLANK_DRAFT, upc },
           thumbnail,
           upc,
           error: message,
@@ -299,6 +303,33 @@ export default function ScanPage() {
     [handleCapture, show],
   );
 
+  /**
+   * Look a barcode up without the camera: worn or curved barcodes defeat every
+   * reader, and the number underneath the bars is always printed.
+   */
+  const submitTypedBarcode = useCallback(async () => {
+    const upc = normaliseBarcode(typedBarcode ?? "");
+    if (!upc) {
+      show("Enter the digits printed under the barcode.", "bad");
+      return;
+    }
+    setTypedBarcode(null);
+
+    const known = await carsForUpc(upc);
+    if (known.length === 1) {
+      const updated = await addAnother(known[0]);
+      show(`${updated.name} — now ×${updated.quantity}`, "good");
+      return;
+    }
+    if (known.length > 1) {
+      setPicker({ upc, cars: known });
+      return;
+    }
+    // Unknown barcode with no photo to work from: open the form so it can be
+    // filled in by hand, and remember the barcode against whatever is saved.
+    setPending({ draft: { ...BLANK_DRAFT, upc }, upc });
+  }, [typedBarcode, show]);
+
   const toggleTorch = useCallback(async () => {
     const track = streamRef.current?.getVideoTracks()[0];
     if (!track) return;
@@ -317,11 +348,14 @@ export default function ScanPage() {
 
   const savePending = useCallback(async () => {
     if (!pending) return;
-    const { draft, thumbnail, upc, confidence } = pending;
+    const { draft, thumbnail, confidence } = pending;
     if (!draft.name.trim()) {
-      show("Give it a name first.", "bad");
+      // Inline, not a toast: this message sits inside the sheet the user is
+      // looking at, so it cannot be missed.
+      setPending({ ...pending, saveError: "Give it a name before saving." });
       return;
     }
+    const upc = draft.upc ?? pending.upc;
     const now = Date.now();
     const car: Car = {
       id: newId(),
@@ -343,8 +377,21 @@ export default function ScanPage() {
       addedAt: now,
       updatedAt: now,
     };
-    await putCar(car);
-    if (upc) await linkUpc(upc, car.id);
+    try {
+      await putCar(car);
+      if (upc) await linkUpc(upc, car.id);
+    } catch (error) {
+      // A failed write used to reject silently, leaving the sheet open with no
+      // explanation — indistinguishable from the button not working.
+      setPending({
+        ...pending,
+        saveError:
+          error instanceof Error ?
+            `Could not save: ${error.message}`
+          : "Could not save to this device's storage.",
+      });
+      return;
+    }
     announceChange();
     setPending(null);
     vibrate(30);
@@ -430,15 +477,24 @@ export default function ScanPage() {
               >
                 {torch.on ? "🔦" : "💡"}
               </button>
-            : <button
-                type="button"
-                className="side-action"
-                onClick={() => setPending({ draft: { ...BLANK_DRAFT } })}
-                title="Add by hand"
-              >
-                ✎
-              </button>
-            }
+            : <span className="side-action" style={{ visibility: "hidden" }} />}
+          </div>
+
+          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+            <button
+              type="button"
+              className="btn btn-block btn-ghost"
+              onClick={() => setTypedBarcode("")}
+            >
+              Type a barcode
+            </button>
+            <button
+              type="button"
+              className="btn btn-block btn-ghost"
+              onClick={() => setPending({ draft: { ...BLANK_DRAFT } })}
+            >
+              Add by hand
+            </button>
           </div>
 
           <div className="card" style={{ marginTop: 4 }}>
@@ -481,6 +537,49 @@ export default function ScanPage() {
           </p>
         </>
       }
+
+      {typedBarcode !== null && (
+        <div className="sheet-backdrop" onClick={() => setTypedBarcode(null)}>
+          <div className="sheet" onClick={(event) => event.stopPropagation()}>
+            <h2>Type a barcode</h2>
+            <p className="muted small" style={{ marginTop: 2, marginBottom: 14 }}>
+              The digits printed under the bars. If you already own this car it
+              is added straight away.
+            </p>
+            <label className="field">
+              <span>Barcode</span>
+              <input
+                autoFocus
+                inputMode="numeric"
+                value={typedBarcode}
+                onChange={(event) =>
+                  setTypedBarcode(event.target.value.replace(/[^0-9]/g, ""))
+                }
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") void submitTypedBarcode();
+                }}
+                placeholder="027084123456"
+              />
+            </label>
+            <div className="sheet-actions">
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => void submitTypedBarcode()}
+              >
+                Look it up
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => setTypedBarcode(null)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {picker && (
         <div className="sheet-backdrop" onClick={() => setPicker(null)}>
@@ -584,8 +683,27 @@ export default function ScanPage() {
 
             <CarFields
               draft={pending.draft}
-              onChange={(draft) => setPending({ ...pending, draft })}
+              onChange={(draft) =>
+                setPending({ ...pending, draft, saveError: undefined })
+              }
             />
+
+            {pending.saveError && (
+              <p
+                className="small"
+                style={{
+                  margin: "4px 0 0",
+                  padding: "10px 12px",
+                  borderRadius: 10,
+                  border: "1px solid #5a2320",
+                  background: "#20100f",
+                  lineHeight: 1.45,
+                }}
+                role="alert"
+              >
+                {pending.saveError}
+              </p>
+            )}
 
             <div className="sheet-actions">
               <button type="button" className="btn btn-primary" onClick={() => void savePending()}>

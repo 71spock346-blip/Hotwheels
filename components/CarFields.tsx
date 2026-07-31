@@ -15,6 +15,7 @@ export type CarDraft = Pick<
   | "condition"
   | "quantity"
   | "notes"
+  | "upc"
 >;
 
 interface Props {
@@ -135,6 +136,19 @@ export default function CarFields({ draft, onChange, compact }: Props) {
         </label>
       </div>
 
+      <label className="field">
+        <span>Barcode</span>
+        <input
+          inputMode="numeric"
+          value={draft.upc ?? ""}
+          onChange={(event) =>
+            set("upc", text(event.target.value.replace(/[^0-9]/g, "")))
+          }
+          placeholder="Type it if it will not scan"
+          autoComplete="off"
+        />
+      </label>
+
       {!compact && (
         <>
           <label className="field">
@@ -178,6 +192,7 @@ export function draftFromCar(car: Car): CarDraft {
     condition: car.condition,
     quantity: car.quantity,
     notes: car.notes,
+    upc: car.upc,
   };
 }
 
