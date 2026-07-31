@@ -106,6 +106,59 @@ collection. The **Stats** tab has:
 
 Take a backup occasionally, and after any big logging session.
 
+## Putting it on the Google Play Store
+
+The app ships as a Trusted Web Activity: a thin Android wrapper around this
+same site, which is Google's own supported way to publish a web app. The code
+here already includes what that needs.
+
+**Before you start**, know the two real gates:
+
+- A Google Play developer account costs **$25, one time**.
+- If you register a **personal** (not organisation) account, Google requires a
+  closed test with **at least 12 testers opted in continuously for 14 days**
+  before you may apply for production access. Budget weeks, not days.
+
+**The steps:**
+
+1. Deploy to Vercel and confirm the site works on your phone.
+2. Set a real contact address in `app/privacy/page.tsx` (`CONTACT_EMAIL`).
+   Play rejects placeholder contact details.
+3. Generate the Android package. The easiest route is
+   [PWABuilder](https://www.pwabuilder.com) — paste your URL, choose Android,
+   download the package. The command-line alternative is Google's
+   [Bubblewrap](https://github.com/GoogleChromeLabs/bubblewrap):
+   ```bash
+   npm install -g @bubblewrap/cli
+   bubblewrap init --manifest https://YOUR-APP.vercel.app/manifest.json
+   bubblewrap build
+   ```
+4. Upload the resulting `.aab` to the Play Console and enrol in Play App
+   Signing.
+5. Play Console → *Test and release → Setup → App signing* gives you a
+   **SHA-256 certificate fingerprint**. Add it in Vercel alongside the package
+   name:
+
+   | Variable | Example |
+   | --- | --- |
+   | `TWA_PACKAGE_NAME` | `com.yourname.garage` |
+   | `TWA_SHA256_FINGERPRINT` | `AB:CD:…` (comma-separate if Play lists several) |
+
+   Redeploy, then check `https://YOUR-APP.vercel.app/.well-known/assetlinks.json`
+   returns your package rather than `[]`. Without this the app runs but keeps a
+   browser URL bar pinned to the top.
+6. Complete the store listing: privacy policy URL (`/privacy`), data safety
+   form (declare the camera and that photos go to a third party for
+   processing), content rating, icon, feature graphic and screenshots.
+
+### Before you publish publicly
+
+Identification runs on **your** API key. On a private URL that is fine. Listed
+on Play, every install's photos bill to you, and `/api/identify` is an open
+endpoint anyone can call. Decide how that is paid for before going public —
+per-install rate limiting, a subscription, or having each user supply their own
+key in settings.
+
 ## Running it locally
 
 ```bash

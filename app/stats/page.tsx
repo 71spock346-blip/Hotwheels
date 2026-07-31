@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import { FlameMark } from "@/components/icons";
 import { Toast, useToast } from "@/components/Toast";
@@ -201,6 +202,12 @@ export default function StatsPage() {
           }}
         />
       </div>
+
+      <p className="muted tiny" style={{ marginTop: 20, textAlign: "center" }}>
+        <Link href="/privacy" style={{ textDecoration: "underline" }}>
+          Privacy policy
+        </Link>
+      </p>
 
       <Toast toast={toast} />
     </main>

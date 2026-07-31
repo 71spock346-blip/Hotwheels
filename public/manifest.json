@@ -2,6 +2,7 @@
   "name": "Garage — Hot Wheels Tracker",
   "short_name": "Garage",
   "description": "Scan a card, log the car. Barcode and photo identification for a die-cast collection.",
+  "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

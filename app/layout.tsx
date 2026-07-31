@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import QueueRunner from "@/components/QueueRunner";
+import ServiceWorkerRegistrar from "@/components/ServiceWorkerRegistrar";
 import TabBar from "@/components/TabBar";
 import "./globals.css";
 
@@ -32,6 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         {children}
         <QueueRunner />
+        <ServiceWorkerRegistrar />
         <TabBar />
       </body>
     </html>
