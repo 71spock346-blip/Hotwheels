@@ -151,11 +151,20 @@ here already includes what that needs.
    form (declare the camera and that photos go to a third party for
    processing), content rating, icon, feature graphic and screenshots.
 
-### Free tier and paid unlock
+### Free tier and credit packs
 
-Identification runs on **your** API key, so a public listing means every
-install's photos bill to you. The app therefore meters the free tier and sells
-an unlimited unlock through Google Play Billing.
+Identification runs on **your** API key at roughly 2.5¢ a card, so a public
+listing means every install's photos bill to you. The app gives each install a
+small free allowance and then sells **credit packs** through Google Play
+Billing.
+
+Credits rather than an unlimited unlock, because the cost is per use. Selling
+"unlimited" once against a recurring per-scan cost is an unbounded liability: a
+collector logging a 2,000-car backlog costs about $50 in API calls, which wipes
+out the margin from roughly twenty buyers. Credits keep revenue and cost moving
+together, and they fit how collectors actually behave — a big burst when they
+first log a collection, then a trickle — which is also why a subscription is a
+poor fit here, since it gets cancelled as soon as the burst is over.
 
 **This is off until you configure it**, which is deliberate — a private
 deployment for one person should never see a paywall. Metering switches on only
@@ -163,9 +172,16 @@ once a Redis store is configured.
 
 1. **Add a store.** Vercel dashboard → **Storage** → Redis (Upstash) from the
    Marketplace. It sets `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`
-   for you. Set `FREE_SCAN_LIMIT` if you want something other than 50.
-2. **Create the product.** Play Console → **Monetise → In-app products** →
-   create a one-off product. Put its id in `PLAY_PRODUCT_ID`.
+   for you. `FREE_SCAN_LIMIT` defaults to 10.
+2. **Create the products.** Play Console → **Monetise → In-app products** →
+   create one **consumable** product per pack. Then list them in
+   `PLAY_CREDIT_PACKS`, which maps each product id to what it grants:
+   ```json
+   [{"id":"identifications_250","credits":250},{"id":"identifications_1000","credits":1000}]
+   ```
+   The mapping lives on the server so a client cannot ask for a pack that was
+   never sold. Prices are read live from Play, so they are always right for the
+   user's country — do not hard-code them anywhere.
 3. **Let the server verify purchases.** Create a Google Cloud service account,
    grant it access under Play Console → **Users and permissions**, and set
    `GOOGLE_SERVICE_ACCOUNT_EMAIL` and `GOOGLE_PRIVATE_KEY` from its JSON key.
@@ -173,17 +189,34 @@ once a Redis store is configured.
    Billing prompt, or set `"features": { "playBilling": { "enabled": true } }`
    in `twa-manifest.json`. PWABuilder has the same option.
 
-How it fits together: the free tier is counted per install, server side, and
-checked *before* any API call — an exhausted install costs you nothing. A scan
-is only counted when it actually returns a usable answer, so a failure never
-costs the user. Purchases go through the Digital Goods API, and the token is
-verified against Google's servers and acknowledged before anything is unlocked;
-an unacknowledged purchase is auto-refunded by Google after three days.
+How it fits together. The balance is checked *before* any API call, so an
+install with nothing left costs you nothing, and a credit is only spent once a
+usable answer comes back, so a failure never costs the user one. The free
+allowance is always spent before purchased credits. Purchases go through the
+Digital Goods API; the token is verified against Google's servers and
+acknowledged before credits are banked, because Google auto-refunds a purchase
+left unacknowledged for three days. Each purchase token is claimed atomically,
+so a replayed or retried request grants credits exactly once. The purchase is
+then consumed so the same pack can be bought again, and **Restore a purchase**
+recovers anything paid for but not banked — a crash between payment and
+verification, or a reinstall.
 
-Worth knowing: the free tier is keyed on a per-install id, so clearing app data
-earns a fresh allowance. Closing that properly means user accounts, which is a
+If the store is unreachable the app fails **closed**: identification stops with
+a "try again in a moment" message rather than guessing, since guessing wrong
+spends real money.
+
+Worth knowing: the free allowance is keyed on a per-install id, so clearing app
+data earns a fresh one. Closing that properly means user accounts, which is a
 lot of product for a collection app to carry. It stops incidental cost, which is
 the actual risk.
+
+### Pricing sanity check
+
+Before setting prices, run your own numbers. At ~2.5¢ a scan and Google's 15%
+cut, a 10-scan free allowance costs up to 25¢ per install, and only a small
+fraction of installs ever buy. Price the smallest pack so that one sale covers
+the free allowances of the installs that never convert — a pack of 250 costs you
+about $6.25 to serve, so anything under that price loses money on every sale.
 
 ## Running it locally
 

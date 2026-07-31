@@ -531,7 +531,7 @@ export default function ScanPage() {
                     {pending.error} You can still add cars by hand, and barcodes
                     you have scanned before keep working.{" "}
                     <Link href="/stats" style={{ textDecoration: "underline" }}>
-                      Unlock unlimited
+                      Get more identifications
                     </Link>
                     .
                   </>

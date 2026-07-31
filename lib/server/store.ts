@@ -1,7 +1,7 @@
 import "server-only";
 
 /**
- * Tiny key-value store for quota and entitlements.
+ * Tiny key-value store for the free tier and purchased credits.
  *
  * Backed by Upstash Redis over its REST API when configured — no SDK, just
  * fetch, which suits serverless. Falls back to process memory otherwise so the
@@ -41,20 +41,34 @@ export async function get(key: string): Promise<string | null> {
   return result === null || result === undefined ? null : String(result);
 }
 
-export async function set(key: string, value: string): Promise<void> {
-  if (!storeConfigured) {
-    memory.set(key, value);
-    return;
-  }
-  await command("SET", key, value);
+export async function getNumber(key: string): Promise<number> {
+  const raw = await get(key);
+  const value = Number(raw ?? "0");
+  return Number.isFinite(value) ? value : 0;
 }
 
-/** Atomic increment — the reason a real store matters once this is public. */
-export async function increment(key: string): Promise<number> {
+export async function increment(key: string, by = 1): Promise<number> {
   if (!storeConfigured) {
-    const next = Number(memory.get(key) ?? "0") + 1;
+    const next = Number(memory.get(key) ?? "0") + by;
     memory.set(key, String(next));
     return next;
   }
-  return Number(await command("INCR", key));
+  return Number(await command("INCRBY", key, by));
+}
+
+export async function decrement(key: string, by = 1): Promise<number> {
+  return increment(key, -by);
+}
+
+/**
+ * Atomic claim, used to make a purchase token single-use. Returns true only for
+ * the caller that actually created the key, so a replayed token grants nothing.
+ */
+export async function claim(key: string, value = "1"): Promise<boolean> {
+  if (!storeConfigured) {
+    if (memory.has(key)) return false;
+    memory.set(key, value);
+    return true;
+  }
+  return (await command("SET", key, value, "NX")) !== null;
 }

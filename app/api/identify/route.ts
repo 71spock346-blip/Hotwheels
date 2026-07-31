@@ -2,8 +2,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import {
   meteringEnabled,
-  readEntitlement,
-  recordScan,
+  readBalance,
+  spendScan,
   validInstallId,
 } from "@/lib/server/entitlements";
 import type { Identification, TreasureHunt } from "@/lib/types";
@@ -108,11 +108,24 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-    const entitlement = await readEntitlement(installId);
-    if (!entitlement.pro && entitlement.remaining <= 0) {
+    let remaining: number;
+    try {
+      remaining = (await readBalance(installId)).remaining;
+    } catch {
+      // Fail closed: without a reliable count we cannot tell a paying user
+      // from an exhausted one, and guessing wrong spends real money.
       return NextResponse.json(
         {
-          error: `You have used all ${entitlement.limit} free identifications.`,
+          error: "Cannot check your balance right now. Try again in a moment.",
+          code: "metering_unavailable",
+        },
+        { status: 503 },
+      );
+    }
+    if (remaining <= 0) {
+      return NextResponse.json(
+        {
+          error: "You have no identifications left.",
           code: "quota_exhausted",
         },
         { status: 402 },
@@ -185,8 +198,8 @@ export async function POST(request: Request) {
     }
 
     if (meteringEnabled && validInstallId(installId)) {
-      // Only a usable answer costs the user a scan.
-      await recordScan(installId).catch(() => undefined);
+      // Only a usable answer costs the user an identification.
+      await spendScan(installId).catch(() => undefined);
     }
 
     return NextResponse.json(identification);
