@@ -11,7 +11,16 @@ import type { Identification, TreasureHunt } from "@/lib/types";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const MODEL = "claude-opus-5";
+/**
+ * Cost per identification is the number that decides whether this can be sold
+ * at a sane price, and the model is the biggest lever on it. Opus reads small
+ * toy numbers off glary blister cards most reliably, but a cheaper model may be
+ * accurate enough — set IDENTIFY_MODEL and measure before assuming either way.
+ */
+const MODEL = process.env.IDENTIFY_MODEL ?? "claude-opus-5";
+
+/** Lower effort trades some care for fewer tokens. */
+const EFFORT = process.env.IDENTIFY_EFFORT ?? "medium";
 
 const SYSTEM = `You identify die-cast toy cars from photographs for a collector's inventory app.
 
@@ -222,7 +231,7 @@ async function createMessage(
     model: MODEL,
     max_tokens: 2048,
     system: SYSTEM,
-    output_config: { effort: "medium", format: { type: "json_schema", schema: SCHEMA } },
+    output_config: { effort: EFFORT, format: { type: "json_schema", schema: SCHEMA } },
     messages: [
       {
         role: "user" as const,
