@@ -50,6 +50,7 @@ export default function ScanPage() {
   const [status, setStatus] = useState<CameraStatus>("starting");
   const [cameraError, setCameraError] = useState("");
   const [scannerKind, setScannerKind] = useState<"native" | "zxing" | null>(null);
+  const [scannerError, setScannerError] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>("confirm");
   const [liveBarcode, setLiveBarcode] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -128,12 +129,25 @@ export default function ScanPage() {
           | undefined;
         if (capabilities?.torch) setTorch({ available: true, on: false });
 
-        const scanner = await createScanner();
-        scannerRef.current = scanner;
-        if (!cancelled) {
-          setScannerKind(scanner.kind);
-          setStatus("ready");
-        }
+        // The camera is live, so the shutter must work from this moment.
+        if (!cancelled) setStatus("ready");
+
+        // Load the barcode decoder in the background. On a browser without a
+        // native one this pulls a sizeable chunk over the network; if that is
+        // slow or fails, it must degrade to "no barcode reading" rather than
+        // leaving the whole screen stuck behind a disabled shutter.
+        createScanner()
+          .then((scanner) => {
+            if (cancelled) return;
+            scannerRef.current = scanner;
+            setScannerKind(scanner.kind);
+          })
+          .catch((error: unknown) => {
+            if (cancelled) return;
+            setScannerError(
+              error instanceof Error ? error.message : "Barcode reader failed to load",
+            );
+          });
       } catch (error) {
         if (cancelled) return;
         setStatus("error");
@@ -180,8 +194,18 @@ export default function ScanPage() {
         const thumbnail = await makeThumbnail(imageDataUrl).catch(() => undefined);
 
         if (!identification.isHotWheels && !identification.name) {
+          // Previously this showed a brief toast and returned, opening no
+          // sheet — from the user's side the shutter simply did nothing and
+          // the photo was thrown away. A capture must never vanish: offer the
+          // form so the car can be entered by hand instead.
           cooldown(upc, SUPPRESS_MS);
-          show("No car found in that photo. Try again, closer.", "bad");
+          setPending({
+            draft: { ...BLANK_DRAFT, upc },
+            thumbnail,
+            upc,
+            error:
+              "Could not read that card. Fill it in by hand below, or discard and try again with the card filling more of the frame.",
+          });
           return;
         }
 
@@ -287,9 +311,16 @@ export default function ScanPage() {
 
   const onShutter = useCallback(() => {
     const video = videoRef.current;
-    if (!video || !video.videoWidth) return;
-    void handleCapture(captureFrame(video, { aspect: viewAspect() }), liveBarcode ?? undefined);
-  }, [handleCapture, liveBarcode]);
+    if (!video || !video.videoWidth) {
+      // Used to return silently, which is indistinguishable from a dead button.
+      show("The camera has not produced a frame yet. Give it a second.", "bad");
+      return;
+    }
+    void handleCapture(
+      captureFrame(video, { aspect: viewAspect() }),
+      liveBarcode ?? undefined,
+    );
+  }, [handleCapture, liveBarcode, viewAspect, show]);
 
   const onPickFile = useCallback(
     async (file: File) => {
@@ -531,9 +562,14 @@ export default function ScanPage() {
 
           <p className="muted tiny" style={{ marginTop: 8 }}>
             Barcode reader:{" "}
-            {scannerKind === "native" ? "built into this browser"
+            {scannerError ? `unavailable — ${scannerError}`
+            : scannerKind === "native" ? "built into this browser"
             : scannerKind === "zxing" ? "ZXing"
-            : "starting…"}
+            : "loading…"}
+            {" · "}
+            <Link href="/diagnostics" style={{ textDecoration: "underline" }}>
+              Diagnostics
+            </Link>
           </p>
         </>
       }
