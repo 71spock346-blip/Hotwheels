@@ -1,5 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
+import {
+  meteringEnabled,
+  readEntitlement,
+  recordScan,
+  validInstallId,
+} from "@/lib/server/entitlements";
 import type { Identification, TreasureHunt } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -92,6 +98,28 @@ export async function POST(request: Request) {
     );
   }
 
+  // Free-tier metering. Checked before the call so an exhausted install never
+  // spends anything, and only counted after a successful read below.
+  const installId = request.headers.get("x-install-id");
+  if (meteringEnabled) {
+    if (!validInstallId(installId)) {
+      return NextResponse.json(
+        { error: "Missing install id.", code: "no_install_id" },
+        { status: 400 },
+      );
+    }
+    const entitlement = await readEntitlement(installId);
+    if (!entitlement.pro && entitlement.remaining <= 0) {
+      return NextResponse.json(
+        {
+          error: `You have used all ${entitlement.limit} free identifications.`,
+          code: "quota_exhausted",
+        },
+        { status: 402 },
+      );
+    }
+  }
+
   let body: IdentifyRequest;
   try {
     body = (await request.json()) as IdentifyRequest;
@@ -154,6 +182,11 @@ export async function POST(request: Request) {
         { error: "Could not read the identification result.", code: "bad_output" },
         { status: 502 },
       );
+    }
+
+    if (meteringEnabled && validInstallId(installId)) {
+      // Only a usable answer costs the user a scan.
+      await recordScan(installId).catch(() => undefined);
     }
 
     return NextResponse.json(identification);

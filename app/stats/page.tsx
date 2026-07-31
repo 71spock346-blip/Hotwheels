@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import { FlameMark } from "@/components/icons";
 import { Toast, useToast } from "@/components/Toast";
+import Upgrade from "@/components/Upgrade";
 import { announceChange } from "@/lib/commit";
 import { dequeue, replaceAllCars, updateQueueItem } from "@/lib/db";
 import { download, parseBackupJson, toBackupJson, toCsv } from "@/lib/export";
@@ -66,6 +67,8 @@ export default function StatsPage() {
           <span>Super TH</span>
         </div>
       </div>
+
+      <Upgrade onMessage={show} />
 
       {stats.topSeries.length > 0 && (
         <>

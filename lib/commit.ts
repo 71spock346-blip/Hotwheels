@@ -2,6 +2,7 @@
 
 import { allCars, linkUpc, newId, putCar } from "./db";
 import { findMatch, identificationToCar } from "./dedupe";
+import { installId } from "./install";
 import type { Car, Identification } from "./types";
 
 export const COLLECTION_CHANGED = "collection:changed";
@@ -70,15 +71,20 @@ export async function identify(
 ): Promise<Identification> {
   const response = await fetch("/api/identify", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", "x-install-id": installId() },
     body: JSON.stringify({ images, upc }),
   });
 
   if (!response.ok) {
     const payload = (await response.json().catch(() => null)) as {
       error?: string;
+      code?: string;
     } | null;
-    throw new Error(payload?.error ?? `Identification failed (${response.status}).`);
+    const error = new Error(
+      payload?.error ?? `Identification failed (${response.status}).`,
+    ) as Error & { code?: string };
+    error.code = payload?.code;
+    throw error;
   }
 
   return (await response.json()) as Identification;

@@ -151,13 +151,39 @@ here already includes what that needs.
    form (declare the camera and that photos go to a third party for
    processing), content rating, icon, feature graphic and screenshots.
 
-### Before you publish publicly
+### Free tier and paid unlock
 
-Identification runs on **your** API key. On a private URL that is fine. Listed
-on Play, every install's photos bill to you, and `/api/identify` is an open
-endpoint anyone can call. Decide how that is paid for before going public —
-per-install rate limiting, a subscription, or having each user supply their own
-key in settings.
+Identification runs on **your** API key, so a public listing means every
+install's photos bill to you. The app therefore meters the free tier and sells
+an unlimited unlock through Google Play Billing.
+
+**This is off until you configure it**, which is deliberate — a private
+deployment for one person should never see a paywall. Metering switches on only
+once a Redis store is configured.
+
+1. **Add a store.** Vercel dashboard → **Storage** → Redis (Upstash) from the
+   Marketplace. It sets `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`
+   for you. Set `FREE_SCAN_LIMIT` if you want something other than 50.
+2. **Create the product.** Play Console → **Monetise → In-app products** →
+   create a one-off product. Put its id in `PLAY_PRODUCT_ID`.
+3. **Let the server verify purchases.** Create a Google Cloud service account,
+   grant it access under Play Console → **Users and permissions**, and set
+   `GOOGLE_SERVICE_ACCOUNT_EMAIL` and `GOOGLE_PRIVATE_KEY` from its JSON key.
+4. **Enable billing in the wrapper.** Bubblewrap: answer yes to the Play
+   Billing prompt, or set `"features": { "playBilling": { "enabled": true } }`
+   in `twa-manifest.json`. PWABuilder has the same option.
+
+How it fits together: the free tier is counted per install, server side, and
+checked *before* any API call — an exhausted install costs you nothing. A scan
+is only counted when it actually returns a usable answer, so a failure never
+costs the user. Purchases go through the Digital Goods API, and the token is
+verified against Google's servers and acknowledged before anything is unlocked;
+an unacknowledged purchase is auto-refunded by Google after three days.
+
+Worth knowing: the free tier is keyed on a per-install id, so clearing app data
+earns a fresh allowance. Closing that properly means user accounts, which is a
+lot of product for a collection app to carry. It stops incidental cost, which is
+the actual risk.
 
 ## Running it locally
 

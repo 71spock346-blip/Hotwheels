@@ -42,12 +42,20 @@ export default function QueueRunner() {
             });
             await dequeue(item.id);
           } catch (error) {
+            const code = (error as { code?: string })?.code;
+            // Retrying an exhausted quota or a missing key just fails again;
+            // burn the attempts so the item parks for manual review instead.
+            const terminal =
+              code === "quota_exhausted" ||
+              code === "no_api_key" ||
+              code === "bad_api_key";
             await updateQueueItem({
               ...item,
               status: "failed",
-              attempts: item.attempts + 1,
+              attempts: terminal ? MAX_ATTEMPTS : item.attempts + 1,
               error: error instanceof Error ? error.message : "Identification failed.",
             });
+            if (terminal) break;
           }
         }
       } finally {

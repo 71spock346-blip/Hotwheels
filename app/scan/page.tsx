@@ -25,6 +25,7 @@ interface Pending {
   confidence?: number;
   /** Set when identification failed, so the sheet can explain itself. */
   error?: string;
+  errorCode?: string;
 }
 
 const BARCODE_COOLDOWN_MS = 3000;
@@ -179,11 +180,18 @@ export default function ScanPage() {
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Identification failed.";
+        const code = (error as { code?: string })?.code;
         // Do not let this barcode re-trigger a failing call on the next pass.
         cooldown(upc, SUPPRESS_MS);
         // Still let them log it — a blank form beats losing the car entirely.
         const thumbnail = await makeThumbnail(imageDataUrl).catch(() => undefined);
-        setPending({ draft: { ...BLANK_DRAFT }, thumbnail, upc, error: message });
+        setPending({
+          draft: { ...BLANK_DRAFT },
+          thumbnail,
+          upc,
+          error: message,
+          errorCode: code,
+        });
       } finally {
         setBusy(false);
       }
@@ -518,7 +526,16 @@ export default function ScanPage() {
                 }}
                 role="alert"
               >
-                Could not identify the photo: {pending.error}
+                {pending.errorCode === "quota_exhausted" ?
+                  <>
+                    {pending.error} You can still add cars by hand, and barcodes
+                    you have scanned before keep working.{" "}
+                    <Link href="/stats" style={{ textDecoration: "underline" }}>
+                      Unlock unlimited
+                    </Link>
+                    .
+                  </>
+                : <>Could not identify the photo: {pending.error}</>}
               </p>
             )}
 
