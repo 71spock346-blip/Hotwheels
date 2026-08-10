@@ -7,6 +7,7 @@ import CarFields, { draftFromCar, type CarDraft } from "@/components/CarFields";
 import { Toast, useToast } from "@/components/Toast";
 import { announceChange } from "@/lib/commit";
 import { deleteCar, getCar, putCar } from "@/lib/db";
+import { fileToDataUrl, makeThumbnail } from "@/lib/image";
 import type { Car } from "@/lib/types";
 
 export default function CarPage() {
@@ -61,6 +62,33 @@ export default function CarPage() {
     router.push("/");
   }
 
+  /**
+   * Replace the car's photo. Scanning captures whatever identified the car —
+   * often the carded back or a rushed angle — so the collection deserves a
+   * deliberate photo of the model itself, taken when there is time to take it.
+   */
+  async function replacePhoto(file: File) {
+    if (!car) return;
+    try {
+      const dataUrl = await fileToDataUrl(file, 1280);
+      // 640px keeps enough detail to enjoy in the grid without bloating
+      // IndexedDB — a full-resolution photo per car adds up fast.
+      const thumbnail = await makeThumbnail(dataUrl, 640);
+      const updated = { ...car, thumbnail };
+      await putCar(updated);
+      setCar(updated);
+      announceChange();
+      show("Photo updated", "good");
+    } catch (error) {
+      show(
+        error instanceof Error ? `Could not use that photo: ${error.message}` : (
+          "Could not use that photo."
+        ),
+        "bad",
+      );
+    }
+  }
+
   if (loading) {
     return (
       <main className="shell">
@@ -107,10 +135,40 @@ export default function CarPage() {
             objectFit: "contain",
             borderRadius: "var(--radius)",
             background: "var(--surface)",
-            marginBottom: 16,
+            marginBottom: 10,
           }}
         />
       )}
+
+      <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+        <label className="btn btn-block">
+          📷 {car.thumbnail ? "Retake photo" : "Take a photo"}
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            hidden
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) void replacePhoto(file);
+              event.target.value = "";
+            }}
+          />
+        </label>
+        <label className="btn btn-block btn-ghost">
+          From library
+          <input
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) void replacePhoto(file);
+              event.target.value = "";
+            }}
+          />
+        </label>
+      </div>
 
       <CarFields draft={draft} onChange={setDraft} />
 

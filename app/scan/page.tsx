@@ -61,6 +61,13 @@ export default function ScanPage() {
     on: false,
   });
   const [typedBarcode, setTypedBarcode] = useState<string | null>(null);
+  /**
+   * A new barcode that is waiting for its front photo. The barcode is printed
+   * on the BACK of the card, so capturing at the moment of detection used to
+   * photograph the back — useless for identification and an ugly thumbnail.
+   * Instead the barcode is held here and attached to the next shutter press.
+   */
+  const [armedUpc, setArmedUpc] = useState<string | null>(null);
 
   const { toast, show } = useToast();
 
@@ -276,13 +283,13 @@ export default function ScanPage() {
         return;
       }
 
-      // A barcode we have never seen. Photograph the card and identify it.
+      // A barcode we have never seen. Do NOT photograph now — the barcode is
+      // on the back of the card, and a photo of the back identifies nothing.
+      // Arm it and let the user flip to the front and press the shutter.
       vibrate([20, 40, 20]);
-      const video = videoRef.current;
-      if (!video) return;
-      await handleCapture(captureFrame(video, { aspect: viewAspect() }), upc);
+      setArmedUpc(upc);
     },
-    [handleCapture, show],
+    [show],
   );
 
   useEffect(() => {
@@ -316,22 +323,26 @@ export default function ScanPage() {
       show("The camera has not produced a frame yet. Give it a second.", "bad");
       return;
     }
-    void handleCapture(
-      captureFrame(video, { aspect: viewAspect() }),
-      liveBarcode ?? undefined,
-    );
-  }, [handleCapture, liveBarcode, viewAspect, show]);
+    // An armed barcode (scanned off the back moments ago) wins over whatever
+    // is in frame now — the user has flipped the card, so the live frame
+    // usually has no barcode at all.
+    const upc = armedUpc ?? liveBarcode ?? undefined;
+    setArmedUpc(null);
+    void handleCapture(captureFrame(video, { aspect: viewAspect() }), upc);
+  }, [handleCapture, armedUpc, liveBarcode, viewAspect, show]);
 
   const onPickFile = useCallback(
     async (file: File) => {
       try {
         const dataUrl = await fileToDataUrl(file);
-        await handleCapture(dataUrl);
+        const upc = armedUpc ?? undefined;
+        setArmedUpc(null);
+        await handleCapture(dataUrl, upc);
       } catch (error) {
         show(error instanceof Error ? error.message : "Could not read that photo.", "bad");
       }
     },
-    [handleCapture, show],
+    [handleCapture, armedUpc, show],
   );
 
   /**
@@ -467,9 +478,11 @@ export default function ScanPage() {
             <div className="reticle" />
             <div className="scan-hint">
               {busy ? "Reading the card…"
+              : armedUpc ?
+                `Got barcode ${armedUpc} — flip to the FRONT and press the shutter`
               : liveBarcode ? `Barcode ${liveBarcode}`
               : status === "starting" ? "Starting camera…"
-              : "Include the barcode, or just press the shutter"}
+              : "Scan the barcode on the back, or just press the shutter"}
             </div>
           </div>
 

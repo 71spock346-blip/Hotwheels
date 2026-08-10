@@ -96,28 +96,52 @@ async function createZxingScanner(): Promise<Scanner> {
 
   const reader = new BrowserMultiFormatReader(hints);
   const canvas = document.createElement("canvas");
+  let pass = 0;
+
+  function decodeRegion(
+    video: HTMLVideoElement,
+    sx: number,
+    sy: number,
+    sw: number,
+    sh: number,
+  ): string | null {
+    // Cap the decode bitmap for speed, but never *upscale* a small region —
+    // that would blur the bars instead of sharpening them.
+    const scale = Math.min(1, DECODE_MAX_EDGE / Math.max(sw, sh));
+    canvas.width = Math.round(sw * scale);
+    canvas.height = Math.round(sh * scale);
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    if (!context) return null;
+    context.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+    try {
+      return reader.decodeFromCanvas(canvas).getText();
+    } catch {
+      return null; // No barcode in this region — completely normal.
+    }
+  }
 
   return {
     kind: "zxing",
     async scan(video) {
       if (!video.videoWidth) return null;
-      // Decode the whole frame, downscaled for speed rather than cropped.
-      // A Hot Wheels barcode sits at the very bottom of the card, so any
-      // centre crop misses it exactly when the user has framed the card well.
-      const scale = Math.min(
-        1,
-        DECODE_MAX_EDGE / Math.max(video.videoWidth, video.videoHeight),
-      );
-      canvas.width = Math.round(video.videoWidth * scale);
-      canvas.height = Math.round(video.videoHeight * scale);
-      const context = canvas.getContext("2d", { willReadFrequently: true });
-      if (!context) return null;
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
-      try {
-        return reader.decodeFromCanvas(canvas).getText();
-      } catch {
-        return null; // No barcode in this frame — completely normal.
+      const width = video.videoWidth;
+      const height = video.videoHeight;
+
+      // Alternate between a whole-frame pass and a centre pass. The wide pass
+      // finds a barcode anywhere; the centre pass reads the middle at full
+      // sensor resolution, which rescues small or distant barcodes that the
+      // downscaled wide pass renders too coarsely to resolve.
+      pass = (pass + 1) % 2;
+      if (pass === 0) {
+        return decodeRegion(video, 0, 0, width, height);
       }
+      return decodeRegion(
+        video,
+        width * 0.15,
+        height * 0.2,
+        width * 0.7,
+        height * 0.6,
+      );
     },
     stop() {
       // BrowserMultiFormatReader holds no stream of its own here; we only ever

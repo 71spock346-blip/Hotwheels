@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!--
+    Original mark in the spirit of the classic die-cast look: red flame body,
+    yellow core, deep navy outline. Deliberately NOT the Mattel logo or
+    wordmark - shipping the real one would be a trademark violation and a
+    Play Store takedown. Palette echoes the era; the shapes are ours.
+  -->
+  <defs>
+    <linearGradient id="body" x1="256" y1="470" x2="256" y2="40" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#d61f06"/>
+      <stop offset="0.65" stop-color="#f43a10"/>
+      <stop offset="1" stop-color="#ff6b1a"/>
+    </linearGradient>
+    <linearGradient id="core" x1="250" y1="420" x2="250" y2="170" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffc400"/>
+      <stop offset="1" stop-color="#ffe873"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" fill="#101119"/>
+
+  <!-- Navy keyline flame, slightly larger, gives the outlined sticker look. -->
+  <path fill="#1b2a56" d="
+    M296 18
+    c16 78 -4 112 -34 148
+    c-17 21 -31 38 -31 62
+    c0 21 12 36 27 41
+    c-32 8 -61 -13 -69 -47
+    c-32 36 -50 78 -50 122
+    c0 88 67 156 157 156
+    c92 0 162 -64 162 -152
+    c0 -60 -28 -102 -64 -140
+    c-6 27 -21 46 -44 54
+    c23 -78 -7 -176 -54 -244
+    Z"/>
+
+  <path fill="url(#body)" d="
+    M295 44
+    c13 68 -6 98 -33 130
+    c-15 19 -28 34 -28 56
+    c0 19 11 32 24 36
+    c-28 7 -54 -11 -61 -41
+    c-28 32 -43 69 -43 108
+    c0 78 59 138 139 138
+    c81 0 143 -57 143 -134
+    c0 -53 -24 -90 -56 -124
+    c-6 24 -19 41 -39 48
+    c20 -69 -5 -155 -46 -217
+    Z"/>
+
+  <!-- Yellow core with a licked tip, the hot centre of the flame. -->
+  <path fill="url(#core)" d="
+    M284 176
+    c9 42 -4 60 -20 80
+    c-11 15 -20 26 -20 42
+    c0 29 24 49 53 49
+    c37 0 62 -27 62 -64
+    c0 -31 -15 -55 -35 -77
+    c-2 17 -11 28 -26 33
+    c13 -40 1 -45 -14 -63
+    Z"/>
+
+  <!-- Wheel: dark spokes on a solid rim survive being 48px on a home screen. -->
+  <g transform="translate(178 398)">
+    <circle r="96" fill="#1b2a56"/>
+    <circle r="84" fill="#101119"/>
+    <circle r="62" fill="#ffc400"/>
+    <g stroke="#101119" stroke-width="12" stroke-linecap="round">
+      <path d="M0 -22 L0 -56"/>
+      <path d="M21 -7 L53 -17"/>
+      <path d="M13 18 L33 45"/>
+      <path d="M-13 18 L-33 45"/>
+      <path d="M-21 -7 L-53 -17"/>
+    </g>
+    <circle r="20" fill="#101119"/>
+    <circle r="9" fill="#ffc400"/>
+  </g>
+</svg>
