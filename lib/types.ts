@@ -33,6 +33,10 @@ export interface Car {
   notes?: string;
   /** 0-1, how sure the identifier was. Absent for manual entries. */
   confidence?: number;
+  /** Owner-set value per unit, in USD. Wins over the estimate everywhere. */
+  value?: number;
+  /** Rough market range per unit, in USD, from the estimator. */
+  estimate?: { low: number; high: number; at: number };
   source: CarSource;
   addedAt: number;
   updatedAt: number;

@@ -16,6 +16,7 @@ export type CarDraft = Pick<
   | "quantity"
   | "notes"
   | "upc"
+  | "value"
 >;
 
 interface Props {
@@ -152,6 +153,23 @@ export default function CarFields({ draft, onChange, compact }: Props) {
       {!compact && (
         <>
           <label className="field">
+            <span>Your value (USD, per car)</span>
+            <input
+              inputMode="decimal"
+              value={draft.value ?? ""}
+              onChange={(event) => {
+                const cleaned = event.target.value.replace(/[^0-9.]/g, "");
+                const parsed = Number(cleaned);
+                set(
+                  "value",
+                  cleaned && Number.isFinite(parsed) ? parsed : undefined,
+                );
+              }}
+              placeholder="Leave empty to use the estimate"
+            />
+          </label>
+
+          <label className="field">
             <span>Condition</span>
             <select
               value={draft.condition}
@@ -193,6 +211,7 @@ export function draftFromCar(car: Car): CarDraft {
     quantity: car.quantity,
     notes: car.notes,
     upc: car.upc,
+    value: car.value,
   };
 }
 

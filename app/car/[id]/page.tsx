@@ -8,6 +8,7 @@ import { Toast, useToast } from "@/components/Toast";
 import { announceChange } from "@/lib/commit";
 import { deleteCar, getCar, putCar } from "@/lib/db";
 import { fileToDataUrl, makeThumbnail } from "@/lib/image";
+import { formatUsd } from "@/lib/value";
 import type { Car } from "@/lib/types";
 
 export default function CarPage() {
@@ -171,6 +172,14 @@ export default function CarPage() {
       </div>
 
       <CarFields draft={draft} onChange={setDraft} />
+
+      {car.estimate && (
+        <p className="muted small" style={{ marginTop: 0, lineHeight: 1.5 }}>
+          Estimated {formatUsd(car.estimate.low)}–{formatUsd(car.estimate.high)} each
+          — a ballpark from general market knowledge, not an appraisal. Set your
+          own value above to override it.
+        </p>
+      )}
 
       <p className="muted tiny" style={{ marginTop: 4, lineHeight: 1.6 }}>
         Added {new Date(car.addedAt).toLocaleDateString()} via {sourceLabel(car.source)}

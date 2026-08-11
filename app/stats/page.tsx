@@ -10,6 +10,12 @@ import { dequeue, replaceAllCars, updateQueueItem } from "@/lib/db";
 import { download, parseBackupJson, toBackupJson, toCsv } from "@/lib/export";
 import { computeStats } from "@/lib/stats";
 import { useCollection } from "@/lib/useCollection";
+import {
+  collectionValue,
+  estimateMissing,
+  formatUsd,
+  type EstimateProgress,
+} from "@/lib/value";
 
 export default function StatsPage() {
   const { cars, queue, refresh } = useCollection();
@@ -18,6 +24,8 @@ export default function StatsPage() {
   const [importing, setImporting] = useState(false);
 
   const stats = useMemo(() => computeStats(cars), [cars]);
+  const value = useMemo(() => collectionValue(cars), [cars]);
+  const [estimating, setEstimating] = useState<EstimateProgress | null>(null);
   const stuck = queue.filter((item) => item.status === "failed" && item.attempts >= 3);
   const maxSeries = stats.topSeries[0]?.count ?? 1;
 
@@ -67,6 +75,76 @@ export default function StatsPage() {
           <span>Super TH</span>
         </div>
       </div>
+
+      {cars.length > 0 && (
+        <>
+          <h2 className="section-title">Collection value</h2>
+          <div className="card" style={{ marginBottom: 14 }}>
+            {value.low > 0 || value.high > 0 ?
+              <b style={{ fontSize: 22 }}>
+                {formatUsd(value.low)}
+                {value.high > value.low && ` – ${formatUsd(value.high)}`}
+              </b>
+            : <b style={{ fontSize: 16 }}>Not estimated yet</b>}
+
+            {value.unvalued > 0 && (
+              <p className="muted small" style={{ margin: "8px 0 0", lineHeight: 1.5 }}>
+                {value.unvalued} car{value.unvalued === 1 ? " has" : "s have"} no
+                value yet.
+              </p>
+            )}
+
+            <p className="muted tiny" style={{ margin: "8px 0 0", lineHeight: 1.5 }}>
+              Ballpark from general market knowledge, not an appraisal — real
+              prices swing with condition and variant. For anything that looks
+              valuable, check recent eBay sold listings before selling. Your own
+              value on a car always overrides the estimate.
+            </p>
+
+            <div className="sheet-actions" style={{ marginTop: 12 }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={estimating !== null || value.unvalued === 0}
+                onClick={async () => {
+                  setEstimating({ done: 0, total: value.unvalued });
+                  const result = await estimateMissing({
+                    onProgress: setEstimating,
+                  });
+                  setEstimating(null);
+                  await refresh();
+                  if (result.error) show(result.error, "bad");
+                  else if (result.estimated > 0)
+                    show(`Estimated ${result.estimated} cars`, "good");
+                  else show("Everything already has a value", "good");
+                }}
+              >
+                {estimating ?
+                  `Estimating ${estimating.done}/${estimating.total}…`
+                : "Estimate missing values"}
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                disabled={estimating !== null || cars.length === 0}
+                onClick={async () => {
+                  setEstimating({ done: 0, total: cars.length });
+                  const result = await estimateMissing({
+                    force: true,
+                    onProgress: setEstimating,
+                  });
+                  setEstimating(null);
+                  await refresh();
+                  if (result.error) show(result.error, "bad");
+                  else show(`Re-estimated ${result.estimated} cars`, "good");
+                }}
+              >
+                Re-estimate all
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       <Upgrade onMessage={show} />
 

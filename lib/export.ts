@@ -14,6 +14,9 @@ const CSV_COLUMNS = [
   "condition",
   "quantity",
   "upc",
+  "value",
+  "estimateLowUsd",
+  "estimateHighUsd",
   "notes",
   "addedAt",
 ] as const;
@@ -24,7 +27,10 @@ export function toCsv(cars: Car[]): string {
     rows.push(
       CSV_COLUMNS.map((column) => {
         const value =
-          column === "addedAt" ? new Date(car.addedAt).toISOString() : car[column];
+          column === "addedAt" ? new Date(car.addedAt).toISOString()
+          : column === "estimateLowUsd" ? car.estimate?.low
+          : column === "estimateHighUsd" ? car.estimate?.high
+          : car[column];
         return escapeCsv(value);
       }).join(","),
     );
