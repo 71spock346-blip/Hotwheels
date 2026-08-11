@@ -11,7 +11,8 @@ import { Toast, useToast } from "@/components/Toast";
 import { carSubtitle } from "@/components/CarRow";
 import { createScanner, normaliseBarcode, type Scanner } from "@/lib/barcode";
 import { addAnother, announceChange, identify } from "@/lib/commit";
-import { carsForUpc, enqueue, linkUpc, newId, putCar } from "@/lib/db";
+import { findMatch } from "@/lib/dedupe";
+import { allCars, carsForUpc, enqueue, linkUpc, newId, putCar } from "@/lib/db";
 import { captureFrame, fileToDataUrl, makeThumbnail } from "@/lib/image";
 import type { Car } from "@/lib/types";
 
@@ -28,6 +29,8 @@ interface Pending {
   errorCode?: string;
   /** Set when a save attempt was rejected, shown next to the save button. */
   saveError?: string;
+  /** A car already in the garage that this identification appears to be. */
+  matched?: Car;
 }
 
 const BARCODE_COOLDOWN_MS = 3000;
@@ -108,8 +111,11 @@ export default function ScanPage() {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
             facingMode: { ideal: "environment" },
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
+            // Ask high; `ideal` degrades gracefully on cameras that cannot.
+            // More pixels help both barcode decoding and the fine print the
+            // identifier reads.
+            width: { ideal: 2560 },
+            height: { ideal: 1440 },
             // Unsupported entries in `advanced` are ignored rather than
             // failing the request. Autofocus is what makes a barcode and the
             // fine print on a card readable at arm's length.
@@ -200,6 +206,15 @@ export default function ScanPage() {
         const identification = await identify([imageDataUrl], upc);
         const thumbnail = await makeThumbnail(imageDataUrl).catch(() => undefined);
 
+        // The card may already be in the garage under a barcode that was
+        // never linked — most of a collection logged before barcode links
+        // existed looks exactly like this. Recognise it rather than growing
+        // a duplicate row.
+        const matched =
+          identification.name ?
+            findMatch(await allCars(), identification)
+          : undefined;
+
         if (!identification.isHotWheels && !identification.name) {
           // Previously this showed a brief toast and returned, opening no
           // sheet — from the user's side the shutter simply did nothing and
@@ -233,6 +248,7 @@ export default function ScanPage() {
           thumbnail,
           upc,
           confidence: identification.confidence,
+          matched,
         });
       } catch (error) {
         const message =
@@ -399,6 +415,52 @@ export default function ScanPage() {
     }
     const upc = draft.upc ?? pending.upc;
     const now = Date.now();
+
+    // Fold into an existing car when this is the same casting — recomputed
+    // from the draft, since edits in the form can make or break the match.
+    const existing = findMatch(await allCars(), {
+      toyNumber: draft.toyNumber,
+      name: draft.name.trim(),
+      year: draft.year,
+      color: draft.color,
+    });
+
+    if (existing) {
+      const merged: Car = {
+        ...existing,
+        quantity: existing.quantity + draft.quantity,
+        // Backfill gaps from the fresh read without clobbering saved data.
+        series: existing.series ?? draft.series,
+        seriesNumber: existing.seriesNumber ?? draft.seriesNumber,
+        collectorNumber: existing.collectorNumber ?? draft.collectorNumber,
+        year: existing.year ?? draft.year,
+        toyNumber: existing.toyNumber ?? draft.toyNumber,
+        color: existing.color ?? draft.color,
+        thumbnail: existing.thumbnail ?? thumbnail,
+        upc: existing.upc ?? upc,
+      };
+      try {
+        await putCar(merged);
+        // Teach this barcode the car it belongs to, so the NEXT scan of it
+        // adds instantly with no photo and no identification cost.
+        if (upc) await linkUpc(upc, merged.id);
+      } catch (error) {
+        setPending({
+          ...pending,
+          saveError:
+            error instanceof Error ?
+              `Could not save: ${error.message}`
+            : "Could not save to this device's storage.",
+        });
+        return;
+      }
+      announceChange();
+      setPending(null);
+      vibrate(30);
+      show(`${merged.name} — already in the garage, now ×${merged.quantity}`, "good");
+      return;
+    }
+
     const car: Car = {
       id: newId(),
       name: draft.name.trim(),
@@ -714,6 +776,24 @@ export default function ScanPage() {
                     .
                   </>
                 : <>Could not identify the photo: {pending.error}</>}
+              </p>
+            )}
+
+            {pending.matched && (
+              <p
+                className="small"
+                style={{
+                  margin: "8px 0 12px",
+                  padding: "10px 12px",
+                  borderRadius: 10,
+                  border: "1px solid #23553a",
+                  background: "#0f1a14",
+                  lineHeight: 1.45,
+                }}
+              >
+                Looks like <b>{pending.matched.name}</b>, already in your garage
+                (×{pending.matched.quantity}). Saving adds another instead of
+                creating a duplicate entry.
               </p>
             )}
 

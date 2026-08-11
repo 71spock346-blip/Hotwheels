@@ -7,12 +7,15 @@ import type { Car, Identification } from "./types";
  * the strongest signal available. When it is missing (loose cars, worn cards)
  * we fall back to name + year + colour, which is weaker but usually right.
  */
-export function matchKey(car: {
+/** The fields that decide whether two entries are the same car. */
+export interface MatchFields {
   toyNumber?: string | null;
   name: string;
   year?: number | null;
   color?: string | null;
-}): string {
+}
+
+export function matchKey(car: MatchFields): string {
   if (car.toyNumber) return `toy:${normalise(car.toyNumber)}`;
   return `name:${normalise(car.name)}|${car.year ?? ""}|${normalise(car.color ?? "")}`;
 }
@@ -26,7 +29,7 @@ function normalise(value: string): string {
 }
 
 /** Find an existing car that this identification should fold into. */
-export function findMatch(cars: Car[], candidate: Identification): Car | undefined {
+export function findMatch(cars: Car[], candidate: MatchFields): Car | undefined {
   const key = matchKey(candidate);
   return cars.find((car) => matchKey(car) === key);
 }
