@@ -11,9 +11,16 @@
       <stop offset="0" stop-color="#ffd100"/>
       <stop offset="1" stop-color="#ffb000"/>
     </linearGradient>
+    <radialGradient id="card" cx="0.47" cy="0.5" r="0.72">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.5" stop-color="#eef5ff"/>
+      <stop offset="0.72" stop-color="#7fb2ea"/>
+      <stop offset="0.9" stop-color="#1476d1"/>
+      <stop offset="1" stop-color="#0f63b8"/>
+    </radialGradient>
   </defs>
 
-  <rect width="512" height="512" fill="#ffffff"/>
+  <rect width="512" height="512" fill="url(#card)"/>
 
   <g transform="translate(252 256) scale(1.13) translate(-252 -256)">
 
