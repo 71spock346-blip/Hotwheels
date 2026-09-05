@@ -1,19 +1,25 @@
 :root {
-  --bg: #0e0f12;
-  --surface: #17191e;
-  --surface-2: #1e2128;
-  --border: #2a2e37;
-  --text: #f2f3f5;
-  --muted: #969dab;
-  --accent: #ff5a1f;
-  --accent-dim: #a83a13;
-  --gold: #ffb703;
-  --green: #3ddc84;
-  --danger: #f0483e;
+  /* The blister-card palette: light blue field, white card stock, navy
+     keylines, red for action, yellow for treasure. One deliberate look —
+     everything painted explicitly, no dark variant. */
+  --bg: #e9f1fb;
+  --surface: #ffffff;
+  --surface-2: #f1f6fd;
+  --border: #c9d9ee;
+  --ink: #00295d;
+  --text: #12294d;
+  --muted: #52698c;
+  --accent: #e8231d;
+  --accent-dim: #b91a15;
+  --blue: #1476d1;
+  --gold: #ffd100;
+  --gold-ink: #b97b00;
+  --green: #1b9e57;
+  --danger: #d21f14;
   --radius: 14px;
   --tab-height: 68px;
 
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 * {
@@ -43,6 +49,7 @@ h3 {
   margin: 0;
   font-weight: 800;
   letter-spacing: -0.02em;
+  color: var(--ink);
 }
 
 button,
@@ -90,11 +97,12 @@ a {
   font-weight: 800;
   letter-spacing: 0.01em;
   text-transform: uppercase;
+  color: var(--ink);
 }
 
 .wordmark .flame {
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   flex: none;
 }
 
@@ -102,9 +110,10 @@ a {
 
 .card {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 2px solid var(--ink);
   border-radius: var(--radius);
   padding: 14px;
+  box-shadow: 0 3px 0 rgba(0, 41, 93, 0.18);
 }
 
 .btn {
@@ -113,18 +122,21 @@ a {
   justify-content: center;
   gap: 8px;
   padding: 11px 16px;
-  border: 1px solid var(--border);
+  border: 2px solid var(--ink);
   border-radius: 11px;
-  background: var(--surface-2);
-  font-weight: 650;
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 700;
   font-size: 15px;
+  box-shadow: 0 2px 0 rgba(0, 41, 93, 0.22);
   transition:
     filter 0.12s ease,
     transform 0.06s ease;
 }
 
 .btn:active {
-  transform: scale(0.98);
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 rgba(0, 41, 93, 0.22);
 }
 
 .btn:disabled {
@@ -134,18 +146,21 @@ a {
 
 .btn-primary {
   background: var(--accent);
-  border-color: var(--accent);
-  color: #140a04;
+  border-color: var(--accent-dim);
+  color: #ffffff;
 }
 
 .btn-ghost {
-  background: transparent;
+  background: var(--surface-2);
+  border-color: var(--border);
+  box-shadow: none;
 }
 
 .btn-danger {
   color: var(--danger);
-  border-color: #4a2320;
-  background: #23151400;
+  border-color: #e8a49e;
+  background: #fff2f0;
+  box-shadow: none;
 }
 
 .btn-block {
@@ -161,7 +176,7 @@ a {
   display: block;
   margin-bottom: 5px;
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--muted);
@@ -172,16 +187,16 @@ a {
 .field textarea {
   width: 100%;
   padding: 11px 12px;
-  border: 1px solid var(--border);
+  border: 2px solid var(--border);
   border-radius: 10px;
-  background: var(--surface-2);
+  background: var(--surface);
   outline: none;
 }
 
 .field input:focus,
 .field select:focus,
 .field textarea:focus {
-  border-color: var(--accent);
+  border-color: var(--blue);
 }
 
 .row {
@@ -193,14 +208,15 @@ a {
 .search {
   width: 100%;
   padding: 12px 14px;
-  border: 1px solid var(--border);
+  border: 2px solid var(--ink);
   border-radius: 11px;
   background: var(--surface);
   outline: none;
+  box-shadow: 0 2px 0 rgba(0, 41, 93, 0.18);
 }
 
 .search:focus {
-  border-color: var(--accent);
+  border-color: var(--blue);
 }
 
 .muted {
@@ -226,9 +242,10 @@ a {
 
 .stat {
   padding: 12px 10px;
-  border: 1px solid var(--border);
+  border: 2px solid var(--ink);
   border-radius: 12px;
   background: var(--surface);
+  box-shadow: 0 3px 0 rgba(0, 41, 93, 0.18);
   text-align: center;
 }
 
@@ -237,6 +254,7 @@ a {
   font-size: 22px;
   font-weight: 800;
   line-height: 1.1;
+  color: var(--ink);
 }
 
 .stat span {
@@ -248,8 +266,16 @@ a {
   color: var(--muted);
 }
 
+.stat.is-gold {
+  background: var(--gold);
+}
+
 .stat.is-gold b {
-  color: var(--gold);
+  color: var(--ink);
+}
+
+.stat.is-gold span {
+  color: #6b5500;
 }
 
 /* ------------------------------------------------------------ car list --- */
@@ -267,19 +293,20 @@ a {
   gap: 12px;
   align-items: center;
   padding: 10px;
-  padding-left: 14px;
+  padding-left: 16px;
   overflow: hidden;
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 2px solid var(--ink);
   border-radius: var(--radius);
+  box-shadow: 0 3px 0 rgba(0, 41, 93, 0.18);
 }
 
 .car::before {
   content: "";
   position: absolute;
   inset: 0 auto 0 0;
-  width: 4px;
-  background: var(--accent-dim);
+  width: 6px;
+  background: var(--accent);
 }
 
 .car.is-th::before {
@@ -287,7 +314,7 @@ a {
 }
 
 .car.is-sth::before {
-  background: linear-gradient(180deg, var(--gold), var(--accent), #b14cff);
+  background: linear-gradient(180deg, var(--gold), var(--accent), var(--blue));
 }
 
 .car-thumb {
@@ -296,19 +323,21 @@ a {
   border-radius: 9px;
   object-fit: cover;
   background: var(--surface-2);
+  border: 1px solid var(--border);
 }
 
 .car-thumb.is-empty {
   display: grid;
   place-items: center;
-  color: #4a505c;
+  color: #9db4d4;
   font-size: 22px;
 }
 
 .car-name {
-  font-weight: 700;
+  font-weight: 750;
   font-size: 15.5px;
   line-height: 1.25;
+  color: var(--ink);
 }
 
 .car-meta {
@@ -322,10 +351,11 @@ a {
   min-width: 34px;
   padding: 5px 8px;
   border-radius: 999px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
+  background: var(--gold);
+  border: 2px solid var(--ink);
+  color: var(--ink);
   text-align: center;
-  font-weight: 700;
+  font-weight: 800;
   font-size: 13px;
 }
 
@@ -338,16 +368,17 @@ a {
   font-weight: 800;
   letter-spacing: 0.05em;
   vertical-align: 1px;
+  border: 1px solid var(--ink);
 }
 
 .badge-th {
-  background: #4a3805;
-  color: var(--gold);
+  background: var(--gold);
+  color: var(--ink);
 }
 
 .badge-sth {
-  background: #4a1a05;
-  color: #ffd166;
+  background: var(--accent);
+  color: #ffffff;
 }
 
 /* --------------------------------------------------------------- empty --- */
@@ -355,8 +386,9 @@ a {
 .empty {
   padding: 44px 20px;
   text-align: center;
-  border: 1px dashed var(--border);
+  border: 2px dashed #9db4d4;
   border-radius: var(--radius);
+  background: var(--surface);
 }
 
 .empty h2 {
@@ -379,9 +411,11 @@ a {
   aspect-ratio: 3 / 4;
   max-height: 58dvh;
   margin: 0 auto;
+  border: 2px solid var(--ink);
   border-radius: var(--radius);
   overflow: hidden;
-  background: #000;
+  background: #0a1526;
+  box-shadow: 0 3px 0 rgba(0, 41, 93, 0.18);
 }
 
 .viewfinder video {
@@ -393,7 +427,7 @@ a {
 .reticle {
   position: absolute;
   inset: 12% 8%;
-  border: 2px solid rgba(255, 255, 255, 0.28);
+  border: 2px solid rgba(255, 255, 255, 0.35);
   border-radius: 12px;
   pointer-events: none;
 }
@@ -404,7 +438,7 @@ a {
   inset: 42% 6% auto;
   height: 2px;
   background: var(--accent);
-  opacity: 0.75;
+  opacity: 0.85;
 }
 
 .scan-hint {
@@ -414,8 +448,9 @@ a {
   bottom: 12px;
   text-align: center;
   font-size: 12.5px;
-  color: rgba(255, 255, 255, 0.85);
-  text-shadow: 0 1px 6px #000;
+  font-weight: 600;
+  color: #ffffff;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9);
   pointer-events: none;
 }
 
@@ -431,13 +466,18 @@ a {
   width: 78px;
   height: 78px;
   border-radius: 50%;
-  border: 4px solid var(--accent);
+  border: 3px solid var(--ink);
   background: var(--accent);
-  box-shadow: 0 0 0 5px rgba(255, 90, 31, 0.16);
+  box-shadow: 0 4px 0 rgba(0, 41, 93, 0.25);
   display: grid;
   place-items: center;
-  color: #140a04;
+  color: #ffffff;
   font-size: 26px;
+}
+
+.shutter:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 rgba(0, 41, 93, 0.25);
 }
 
 .shutter:disabled {
@@ -448,8 +488,9 @@ a {
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  border: 1px solid var(--border);
+  border: 2px solid var(--ink);
   background: var(--surface);
+  box-shadow: 0 2px 0 rgba(0, 41, 93, 0.2);
   display: grid;
   place-items: center;
   font-size: 19px;
@@ -472,19 +513,22 @@ a {
   max-width: calc(100vw - 32px);
   padding: 11px 16px;
   border-radius: 999px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+  background: var(--ink);
+  color: #ffffff;
+  border: 2px solid var(--ink);
+  box-shadow: 0 8px 24px rgba(0, 20, 50, 0.35);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 650;
 }
 
 .toast.is-good {
-  border-color: #23553a;
+  background: var(--green);
+  border-color: var(--green);
 }
 
 .toast.is-bad {
-  border-color: #5a2320;
+  background: var(--danger);
+  border-color: var(--danger);
 }
 
 /* ---------------------------------------------------------------- tabs --- */
@@ -498,9 +542,9 @@ a {
   display: flex;
   height: calc(var(--tab-height) + env(safe-area-inset-bottom));
   padding-bottom: env(safe-area-inset-bottom);
-  background: rgba(14, 15, 18, 0.94);
+  background: rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(12px);
-  border-top: 1px solid var(--border);
+  border-top: 2px solid var(--ink);
 }
 
 .tab {
@@ -511,7 +555,7 @@ a {
   justify-content: center;
   gap: 3px;
   font-size: 10.5px;
-  font-weight: 650;
+  font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--muted);
@@ -534,9 +578,11 @@ a {
   margin-bottom: 14px;
   padding: 11px 13px;
   border-radius: 12px;
-  border: 1px solid #3a3213;
-  background: #1c1a10;
+  border: 2px solid var(--gold-ink);
+  background: #fff7d9;
+  color: #5d4200;
   font-size: 13.5px;
+  font-weight: 600;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -546,8 +592,8 @@ a {
   width: 15px;
   height: 15px;
   flex: none;
-  border: 2px solid #4d4529;
-  border-top-color: var(--gold);
+  border: 2px solid #e5cf86;
+  border-top-color: var(--gold-ink);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
@@ -567,7 +613,7 @@ a {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(6, 22, 48, 0.5);
   padding: 0;
 }
 
@@ -579,7 +625,7 @@ a {
   padding: 18px 16px calc(24px + env(safe-area-inset-bottom));
   border-radius: 18px 18px 0 0;
   background: var(--surface);
-  border-top: 1px solid var(--border);
+  border-top: 3px solid var(--ink);
 }
 
 .sheet h2 {
@@ -599,23 +645,25 @@ a {
   padding: 2px 8px;
   border-radius: 999px;
   font-size: 11px;
-  font-weight: 700;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
+  font-weight: 750;
+  background: #e3f0ff;
+  border: 1px solid var(--blue);
+  color: var(--blue);
 }
 
 .confidence.is-low {
-  color: var(--gold);
-  border-color: #4a3805;
+  color: var(--gold-ink);
+  border-color: var(--gold-ink);
+  background: #fff7d9;
 }
 
 .section-title {
   margin: 22px 0 10px;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--muted);
+  color: var(--ink);
 }
 
 .bar {
@@ -630,18 +678,41 @@ a {
 
 .bar-track {
   position: relative;
-  height: 6px;
+  height: 7px;
   margin-top: 5px;
-  border-radius: 3px;
-  background: var(--surface-2);
+  border-radius: 4px;
+  background: #d8e6f7;
   overflow: hidden;
 }
 
 .bar-fill {
   position: absolute;
   inset: 0 auto 0 0;
-  background: var(--accent);
-  border-radius: 3px;
+  background: var(--blue);
+  border-radius: 4px;
+}
+
+/* Notices used inside sheets and forms. */
+
+.notice {
+  margin: 8px 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  line-height: 1.45;
+  font-size: 13px;
+  border: 2px solid;
+}
+
+.notice-bad {
+  border-color: #e8a49e;
+  background: #fff0ee;
+  color: #7c1a12;
+}
+
+.notice-good {
+  border-color: #8ecfa7;
+  background: #edf9f1;
+  color: #135f37;
 }
 
 @media (min-width: 560px) {

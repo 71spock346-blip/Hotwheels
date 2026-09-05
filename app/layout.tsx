@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   description:
     "Point your phone at a Hot Wheels card and it lands in your collection. Barcode scanning, photo identification, duplicate tracking and export.",
   manifest: "/manifest.json",
-  appleWebApp: { capable: true, title: "Garage", statusBarStyle: "black-translucent" },
+  appleWebApp: { capable: true, title: "Garage", statusBarStyle: "default" },
   icons: {
     icon: [
       { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0e0f12",
+  themeColor: "#e9f1fb",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,

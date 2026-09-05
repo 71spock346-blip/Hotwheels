@@ -754,18 +754,7 @@ export default function ScanPage() {
             </h2>
 
             {pending.error && (
-              <p
-                className="small"
-                style={{
-                  margin: "8px 0 12px",
-                  padding: "10px 12px",
-                  borderRadius: 10,
-                  border: "1px solid #5a2320",
-                  background: "#20100f",
-                  lineHeight: 1.45,
-                }}
-                role="alert"
-              >
+              <p className="notice notice-bad" role="alert">
                 {pending.errorCode === "quota_exhausted" ?
                   <>
                     {pending.error} You can still add cars by hand, and barcodes
@@ -780,17 +769,7 @@ export default function ScanPage() {
             )}
 
             {pending.matched && (
-              <p
-                className="small"
-                style={{
-                  margin: "8px 0 12px",
-                  padding: "10px 12px",
-                  borderRadius: 10,
-                  border: "1px solid #23553a",
-                  background: "#0f1a14",
-                  lineHeight: 1.45,
-                }}
-              >
+              <p className="notice notice-good">
                 Looks like <b>{pending.matched.name}</b>, already in your garage
                 (×{pending.matched.quantity}). Saving adds another instead of
                 creating a duplicate entry.
@@ -818,18 +797,7 @@ export default function ScanPage() {
             />
 
             {pending.saveError && (
-              <p
-                className="small"
-                style={{
-                  margin: "4px 0 0",
-                  padding: "10px 12px",
-                  borderRadius: 10,
-                  border: "1px solid #5a2320",
-                  background: "#20100f",
-                  lineHeight: 1.45,
-                }}
-                role="alert"
-              >
+              <p className="notice notice-bad" style={{ margin: "4px 0 0" }} role="alert">
                 {pending.saveError}
               </p>
             )}

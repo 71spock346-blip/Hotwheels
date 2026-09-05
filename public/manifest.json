@@ -1,5 +1,5 @@
 {
-  "name": "Garage — Hot Wheels Tracker",
+  "name": "Garage \u2014 Hot Wheels Tracker",
   "short_name": "Garage",
   "description": "Scan a card, log the car. Barcode and photo identification for a die-cast collection.",
   "id": "/",
@@ -7,9 +7,12 @@
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0e0f12",
-  "theme_color": "#0e0f12",
-  "categories": ["utilities", "lifestyle"],
+  "background_color": "#e9f1fb",
+  "theme_color": "#e9f1fb",
+  "categories": [
+    "utilities",
+    "lifestyle"
+  ],
   "icons": [
     {
       "src": "/icon-192.png",
