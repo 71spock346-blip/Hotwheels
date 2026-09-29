@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import CarFields, { draftFromCar, type CarDraft } from "@/components/CarFields";
+import CatalogueHint from "@/components/CatalogueHint";
 import { Toast, useToast } from "@/components/Toast";
 import { announceChange } from "@/lib/commit";
 import { deleteCar, getCar, putCar } from "@/lib/db";
@@ -171,6 +172,7 @@ export default function CarPage() {
         </label>
       </div>
 
+      <CatalogueHint draft={draft} onApply={setDraft} />
       <CarFields draft={draft} onChange={setDraft} />
 
       {car.estimate && (

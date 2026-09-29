@@ -33,7 +33,8 @@ Where to look on a standard mainline card:
 - Series: the segment name, e.g. "HW MUSCLE MANIA", "HW EXOTICS", "FAST & FURIOUS", "MONSTER TRUCKS".
 - Series number: position within that segment, printed as a fraction like "3/10".
 - Collector number: the mainline number, printed as a fraction with a large denominator like "112/250".
-- Toy number: a 5-character Mattel item code, two letters then three digits, e.g. "HTB29", "HKG42". Usually small, near the barcode or the bottom corner. This is the single most valuable field — it pins down the exact casting and colour variant — so look carefully for it.
+- Toy number: a 5-character Mattel item code, two letters then three digits, e.g. "HTB29", "HKG42". Usually small, near the barcode or the bottom corner. This is the single most valuable field — it pins down the exact casting and colour variant — so look carefully for it. If it is printed with a suffix ("HTB29-0910"), return just the first five characters.
+- The collector number together with the series name and series position is the next most valuable set: the app looks the release up in a catalogue by these, so read the numbers exactly rather than approximately.
 - Year: the copyright year printed in fine print, or the model year that is part of the casting name.
 
 Treasure Hunt classification:

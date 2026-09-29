@@ -81,6 +81,12 @@ export interface Identification {
   isHotWheels: boolean;
   confidence: number;
   notes: string | null;
+  /**
+   * How the release catalogue confirmed this: by toy number, by collector
+   * number, or by name. null means the catalogue was checked and had no
+   * confident match; absent means it was not checked.
+   */
+  catalogue?: "toy" | "collector" | "name" | null;
 }
 
 export const EMPTY_IDENTIFICATION: Identification = {

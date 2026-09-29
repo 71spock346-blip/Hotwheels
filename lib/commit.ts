@@ -1,9 +1,11 @@
 "use client";
 
+import { enrichIdentification } from "./catalogue";
 import { allCars, linkUpc, newId, putCar } from "./db";
 import { findMatch, identificationToCar } from "./dedupe";
 import { installId } from "./install";
 import type { Car, Identification } from "./types";
+import { voteUpc } from "./upcdb";
 
 export const COLLECTION_CHANGED = "collection:changed";
 
@@ -57,16 +59,27 @@ export async function commitIdentification(
       upc: existing.upc ?? extras.upc,
     };
     await putCar(merged);
-    if (extras.upc) await linkUpc(extras.upc, merged.id);
+    await learnUpc(extras.upc, merged);
     announceChange();
     return { car: merged, wasDuplicate: true };
   }
 
   const car = identificationToCar(newId(), identification, extras);
   await putCar(car);
-  if (extras.upc) await linkUpc(extras.upc, car.id);
+  await learnUpc(extras.upc, car);
   announceChange();
   return { car, wasDuplicate: false };
+}
+
+/**
+ * Remember which car a barcode was on: locally, so the next scan of it here
+ * adds instantly, and in the shared database, so the next collector to scan
+ * it anywhere is offered this car without a photo.
+ */
+export async function learnUpc(upc: string | undefined, car: Car): Promise<void> {
+  if (!upc) return;
+  await linkUpc(upc, car.id);
+  voteUpc(upc, car);
 }
 
 export interface TakeResult {
@@ -112,5 +125,7 @@ export async function identify(
     throw error;
   }
 
-  return (await response.json()) as Identification;
+  // The photo gives a toy number or a collector number; the catalogue turns
+  // that into the whole record, so nothing is left to type in.
+  return enrichIdentification((await response.json()) as Identification);
 }

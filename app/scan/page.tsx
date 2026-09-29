@@ -6,24 +6,59 @@ import CarFields, {
   BLANK_DRAFT,
   type CarDraft,
 } from "@/components/CarFields";
+import CatalogueHint, { applyRelease } from "@/components/CatalogueHint";
 import { FlameMark } from "@/components/icons";
 import { Toast, useToast } from "@/components/Toast";
 import { carSubtitle } from "@/components/CarRow";
 import { createScanner, normaliseBarcode, type Scanner } from "@/lib/barcode";
-import { addAnother, announceChange, identify } from "@/lib/commit";
+import {
+  identificationFromRelease,
+  loadCatalogue,
+  looksLikeToyNumber,
+  lookupToyNumber,
+  releaseSubtitle,
+  type Release,
+} from "@/lib/catalogue";
+import {
+  addAnother,
+  announceChange,
+  commitIdentification,
+  identify,
+  learnUpc,
+} from "@/lib/commit";
 import { findMatch } from "@/lib/dedupe";
-import { allCars, carsForUpc, enqueue, linkUpc, newId, putCar } from "@/lib/db";
+import { allCars, carsForUpc, enqueue, newId, putCar } from "@/lib/db";
 import { captureFrame, fileToDataUrl, makeThumbnail } from "@/lib/image";
-import type { Car } from "@/lib/types";
+import { EMPTY_IDENTIFICATION, type Car, type Identification } from "@/lib/types";
+import { sharedCandidates } from "@/lib/upcdb";
 
 type Mode = "confirm" | "rapid";
 type CameraStatus = "starting" | "ready" | "error";
+
+/** A car offered without a photo: from the shared barcode database or the catalogue. */
+interface Candidate {
+  release?: Release;
+  toyNumber?: string;
+  name: string;
+  year?: number;
+  /** Collectors who confirmed this barcode was on this car. */
+  count?: number;
+}
+
+interface CandidateSheet {
+  upc?: string;
+  title: string;
+  intro: string;
+  items: Candidate[];
+}
 
 interface Pending {
   draft: CarDraft;
   thumbnail?: string;
   upc?: string;
   confidence?: number;
+  /** How the catalogue confirmed the identification, if it did. */
+  catalogue?: Identification["catalogue"];
   /** Set when identification failed, so the sheet can explain itself. */
   error?: string;
   errorCode?: string;
@@ -59,6 +94,7 @@ export default function ScanPage() {
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<Pending | null>(null);
   const [picker, setPicker] = useState<{ upc: string; cars: Car[] } | null>(null);
+  const [candidates, setCandidates] = useState<CandidateSheet | null>(null);
   const [torch, setTorch] = useState<{ available: boolean; on: boolean }>({
     available: false,
     on: false,
@@ -71,11 +107,15 @@ export default function ScanPage() {
    * Instead the barcode is held here and attached to the next shutter press.
    */
   const [armedUpc, setArmedUpc] = useState<string | null>(null);
+  const armedRef = useRef<string | null>(null);
+  armedRef.current = armedUpc;
 
   const { toast, show } = useToast();
 
   // A sheet is open, or we are mid-identify: stop reading frames.
-  pausedRef.current = Boolean(pending || picker || busy || typedBarcode !== null);
+  pausedRef.current = Boolean(
+    pending || picker || candidates || busy || typedBarcode !== null,
+  );
 
   /** Hold a barcode off the auto-capture path for a while. */
   const cooldown = useCallback((upc: string | undefined, ms: number) => {
@@ -248,6 +288,7 @@ export default function ScanPage() {
           thumbnail,
           upc,
           confidence: identification.confidence,
+          catalogue: identification.catalogue,
           matched,
         });
       } catch (error) {
@@ -270,6 +311,70 @@ export default function ScanPage() {
       }
     },
     [mode, show, cooldown],
+  );
+
+  /* --------------------------------------------------------- database --- */
+
+  /**
+   * Ask the shared barcode database who else has scanned this barcode, and
+   * offer their cars. Runs while the user is flipping the card over; if they
+   * press the shutter first, the photo wins and this result is dropped.
+   */
+  const offerShared = useCallback(async (upc: string) => {
+    const found = await sharedCandidates(upc);
+    if (!found.length || armedRef.current !== upc) return;
+    const catalogue = await loadCatalogue().catch(() => null);
+    const items: Candidate[] = found.map((candidate) => {
+      const releases = catalogue ? lookupToyNumber(catalogue, candidate.toyNumber) : [];
+      const release =
+        releases.find((entry) => entry.year === candidate.year) ?? releases[0];
+      return { ...candidate, release };
+    });
+    if (armedRef.current !== upc) return;
+    vibrate(30);
+    setCandidates({
+      upc,
+      title: "Seen this barcode before",
+      intro:
+        "Other collectors confirmed these cars behind this barcode. Tap yours to add it — no photo needed.",
+      items,
+    });
+  }, []);
+
+  /** Save a candidate as-is: complete from the catalogue, no identification cost. */
+  const pickCandidate = useCallback(
+    async (sheet: CandidateSheet, item: Candidate) => {
+      const identification: Identification =
+        item.release ?
+          identificationFromRelease(item.release)
+        : {
+            ...EMPTY_IDENTIFICATION,
+            name: item.name,
+            toyNumber: item.toyNumber ?? null,
+            year: item.year ?? null,
+            isHotWheels: true,
+            confidence: 0.8,
+          };
+      try {
+        const result = await commitIdentification(identification, {
+          upc: sheet.upc,
+          source: sheet.upc ? "barcode" : "manual",
+        });
+        setCandidates(null);
+        setArmedUpc(null);
+        cooldown(sheet.upc, QUEUED_COOLDOWN_MS);
+        vibrate(30);
+        show(
+          result.wasDuplicate ?
+            `${result.car.name} — now ×${result.car.quantity}`
+          : `Added ${result.car.name}`,
+          "good",
+        );
+      } catch (error) {
+        show(error instanceof Error ? `Could not save: ${error.message}` : "Could not save.", "bad");
+      }
+    },
+    [cooldown, show],
   );
 
   /* ------------------------------------------------------ barcode loop --- */
@@ -306,11 +411,14 @@ export default function ScanPage() {
 
       // A barcode we have never seen. Do NOT photograph now — the barcode is
       // on the back of the card, and a photo of the back identifies nothing.
-      // Arm it and let the user flip to the front and press the shutter.
+      // Arm it and let the user flip to the front and press the shutter —
+      // unless the shared database knows it, in which case no photo is needed.
       vibrate([20, 40, 20]);
       setArmedUpc(upc);
+      armedRef.current = upc;
+      void offerShared(upc);
     },
-    [show],
+    [show, offerShared],
   );
 
   useEffect(() => {
@@ -367,11 +475,58 @@ export default function ScanPage() {
   );
 
   /**
-   * Look a barcode up without the camera: worn or curved barcodes defeat every
-   * reader, and the number underneath the bars is always printed.
+   * Look a code up without the camera. A toy number (the "HTB29" printed next
+   * to the barcode) goes straight to the catalogue and comes back complete.
+   * A barcode is for worn or curved ones that defeat every reader — the
+   * digits under the bars are always printed.
    */
-  const submitTypedBarcode = useCallback(async () => {
-    const upc = normaliseBarcode(typedBarcode ?? "");
+  const submitTypedCode = useCallback(async () => {
+    const raw = (typedBarcode ?? "").trim();
+    if (!raw) {
+      show("Type the toy number, or the digits under the barcode.", "bad");
+      return;
+    }
+
+    if (/[A-Za-z]/.test(raw) || (looksLikeToyNumber(raw) && raw.replace(/\D/g, "").length < 8)) {
+      let releases: Release[] = [];
+      try {
+        releases = lookupToyNumber(await loadCatalogue(), raw);
+      } catch {
+        show("The catalogue could not be loaded. Check your connection and try again.", "bad");
+        return;
+      }
+      setTypedBarcode(null);
+      if (releases.length === 1) {
+        const draft = applyRelease({ ...BLANK_DRAFT }, releases[0]);
+        setPending({
+          draft,
+          confidence: 1,
+          catalogue: "toy",
+          matched: findMatch(await allCars(), {
+            toyNumber: draft.toyNumber,
+            name: draft.name,
+            year: draft.year,
+          }),
+        });
+        return;
+      }
+      if (releases.length > 1) {
+        setCandidates({
+          title: "Which release?",
+          intro: `Toy number ${raw.toUpperCase()} appears more than once in the catalogue.`,
+          items: releases.map((release) => ({ release, name: release.name, year: release.year })),
+        });
+        return;
+      }
+      setPending({
+        draft: { ...BLANK_DRAFT, toyNumber: raw.toUpperCase() },
+        error: `Toy number ${raw.toUpperCase()} is not in the catalogue yet. Fill it in by hand — it will be remembered.`,
+        errorCode: "not_in_catalogue",
+      });
+      return;
+    }
+
+    const upc = normaliseBarcode(raw);
     if (!upc) {
       show("Enter the digits printed under the barcode.", "bad");
       return;
@@ -393,10 +548,19 @@ export default function ScanPage() {
       setPicker({ upc, cars: known });
       return;
     }
-    // Unknown barcode with no photo to work from: open the form so it can be
-    // filled in by hand, and remember the barcode against whatever is saved.
+    // Unknown here; the shared database may still know it.
+    setArmedUpc(upc);
+    armedRef.current = upc;
+    const found = await sharedCandidates(upc);
+    if (found.length && armedRef.current === upc) {
+      await offerShared(upc);
+      return;
+    }
+    // Nobody knows it and there is no photo to work from: open the form so it
+    // can be filled in by hand, and remember the barcode against the result.
+    setArmedUpc(null);
     setPending({ draft: { ...BLANK_DRAFT, upc }, upc });
-  }, [typedBarcode, show]);
+  }, [typedBarcode, show, offerShared]);
 
   const toggleTorch = useCallback(async () => {
     const track = streamRef.current?.getVideoTracks()[0];
@@ -461,7 +625,7 @@ export default function ScanPage() {
       };
       try {
         await putCar(wish);
-        if (upc) await linkUpc(upc, wish.id);
+        await learnUpc(upc, wish);
       } catch (error) {
         setPending({
           ...pending,
@@ -508,7 +672,7 @@ export default function ScanPage() {
         await putCar(merged);
         // Teach this barcode the car it belongs to, so the NEXT scan of it
         // adds instantly with no photo and no identification cost.
-        if (upc) await linkUpc(upc, merged.id);
+        await learnUpc(upc, merged);
       } catch (error) {
         setPending({
           ...pending,
@@ -547,13 +711,16 @@ export default function ScanPage() {
       thumbnail,
       upc,
       confidence,
-      source: upc ? "barcode" : "photo",
+      source:
+        upc ? "barcode"
+        : thumbnail ? "photo"
+        : "manual",
       addedAt: now,
       updatedAt: now,
     };
     try {
       await putCar(car);
-      if (upc) await linkUpc(upc, car.id);
+      await learnUpc(upc, car);
     } catch (error) {
       // A failed write used to reject silently, leaving the sheet open with no
       // explanation — indistinguishable from the button not working.
@@ -662,7 +829,7 @@ export default function ScanPage() {
               className="btn btn-block btn-ghost"
               onClick={() => setTypedBarcode("")}
             >
-              Type a barcode
+              Type a code
             </button>
             <button
               type="button"
@@ -699,10 +866,12 @@ export default function ScanPage() {
           </div>
 
           <p className="muted tiny" style={{ marginTop: 14, lineHeight: 1.5 }}>
-            A barcode you have scanned before adds instantly. A new one triggers a
-            photo, because Hot Wheels mainline cars often share a single barcode
-            across a whole assortment. If a barcode will not read, the shutter
-            works on its own — the photo alone is enough to identify a car.
+            A barcode you have scanned before adds instantly, and one other
+            collectors have scanned offers their cars without a photo. Mattel
+            prints one barcode per assortment, not per car, so a brand-new
+            barcode still needs a photo of the front — or the toy number
+            printed next to the barcode, typed in: the catalogue fills in the
+            rest.
           </p>
 
           <p className="muted tiny" style={{ marginTop: 8 }}>
@@ -722,31 +891,34 @@ export default function ScanPage() {
       {typedBarcode !== null && (
         <div className="sheet-backdrop" onClick={() => setTypedBarcode(null)}>
           <div className="sheet" onClick={(event) => event.stopPropagation()}>
-            <h2>Type a barcode</h2>
+            <h2>Type a code</h2>
             <p className="muted small" style={{ marginTop: 2, marginBottom: 14 }}>
-              The digits printed under the bars. If you already own this car it
-              is added straight away.
+              The <b>toy number</b> printed beside the barcode (like HTB29)
+              looks the car up in the catalogue — name, series, number, year,
+              all filled in. Or type the digits under a barcode that will not
+              scan.
             </p>
             <label className="field">
-              <span>Barcode</span>
+              <span>Toy number or barcode</span>
               <input
                 autoFocus
-                inputMode="numeric"
+                autoCapitalize="characters"
+                autoComplete="off"
                 value={typedBarcode}
                 onChange={(event) =>
-                  setTypedBarcode(event.target.value.replace(/[^0-9]/g, ""))
+                  setTypedBarcode(event.target.value.replace(/[^0-9A-Za-z -]/g, ""))
                 }
                 onKeyDown={(event) => {
-                  if (event.key === "Enter") void submitTypedBarcode();
+                  if (event.key === "Enter") void submitTypedCode();
                 }}
-                placeholder="027084123456"
+                placeholder="HTB29"
               />
             </label>
             <div className="sheet-actions">
               <button
                 type="button"
                 className="btn btn-primary"
-                onClick={() => void submitTypedBarcode()}
+                onClick={() => void submitTypedCode()}
               >
                 Look it up
               </button>
@@ -820,6 +992,68 @@ export default function ScanPage() {
         </div>
       )}
 
+      {candidates && (
+        <div className="sheet-backdrop" onClick={() => setCandidates(null)}>
+          <div className="sheet" onClick={(event) => event.stopPropagation()}>
+            <h2>{candidates.title}</h2>
+            <p className="muted small" style={{ marginTop: 0 }}>
+              {candidates.intro}
+            </p>
+            <div className="cars">
+              {candidates.items.map((item, index) => (
+                <button
+                  key={`${item.toyNumber ?? item.release?.toyNumber ?? index}-${index}`}
+                  type="button"
+                  className="car"
+                  style={{ textAlign: "left", width: "100%" }}
+                  onClick={() => void pickCandidate(candidates, item)}
+                >
+                  <div className="car-thumb is-empty">⚙</div>
+                  <div style={{ minWidth: 0 }}>
+                    <div className="car-name">{item.release?.name ?? item.name}</div>
+                    <div className="car-meta">
+                      {item.release ?
+                        releaseSubtitle(item.release)
+                      : [item.year, item.toyNumber].filter(Boolean).join(" · ")}
+                    </div>
+                  </div>
+                  {item.count !== undefined && (
+                    <div className="qty" title="Collectors who confirmed this">
+                      {item.count}
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+            <div className="sheet-actions">
+              {candidates.upc && (
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => {
+                    // Keep the barcode armed: the next shutter press attaches it.
+                    setCandidates(null);
+                  }}
+                >
+                  None — photograph the front
+                </button>
+              )}
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => {
+                  setCandidates(null);
+                  setArmedUpc(null);
+                  cooldown(candidates.upc, SUPPRESS_MS);
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {pending && (
         <div className="sheet-backdrop">
           <div className="sheet">
@@ -839,6 +1073,8 @@ export default function ScanPage() {
                     </Link>
                     .
                   </>
+                : pending.errorCode === "not_in_catalogue" ?
+                  pending.error
                 : <>Could not identify the photo: {pending.error}</>}
               </p>
             )}
@@ -860,17 +1096,32 @@ export default function ScanPage() {
             )}
 
             <p className="muted small" style={{ marginTop: 2, marginBottom: 14 }}>
-              {pending.confidence !== undefined ?
+              {pending.catalogue ?
+                <span className="confidence">
+                  ✓ Confirmed by the catalogue
+                  {pending.catalogue === "toy" ? " (toy number)"
+                  : pending.catalogue === "collector" ? " (collector number)"
+                  : ""}
+                </span>
+              : pending.confidence !== undefined ?
                 <span
                   className={`confidence${pending.confidence < 0.6 ? " is-low" : ""}`}
                 >
                   {Math.round(pending.confidence * 100)}% sure
                 </span>
-              : "Fill in what you know — only the name is required."}
+              : "Type the toy number and the catalogue fills in the rest — only the name is required."
+              }
               {pending.upc && (
                 <span style={{ marginLeft: 8 }}>Barcode {pending.upc}</span>
               )}
             </p>
+
+            <CatalogueHint
+              draft={pending.draft}
+              onApply={(draft) =>
+                setPending({ ...pending, draft, catalogue: "toy", saveError: undefined })
+              }
+            />
 
             <CarFields
               draft={pending.draft}

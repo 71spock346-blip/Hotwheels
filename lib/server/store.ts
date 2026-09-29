@@ -60,6 +60,33 @@ export async function decrement(key: string, by = 1): Promise<number> {
   return increment(key, -by);
 }
 
+const memoryHashes = new Map<string, Map<string, number>>();
+
+/** Count one vote for `field` under a hash key. */
+export async function hashIncrement(key: string, field: string, by = 1): Promise<number> {
+  if (!storeConfigured) {
+    const hash = memoryHashes.get(key) ?? new Map<string, number>();
+    hash.set(field, (hash.get(field) ?? 0) + by);
+    memoryHashes.set(key, hash);
+    return hash.get(field) as number;
+  }
+  return Number(await command("HINCRBY", key, field, by));
+}
+
+export async function hashAll(key: string): Promise<Record<string, number>> {
+  if (!storeConfigured) {
+    return Object.fromEntries(memoryHashes.get(key) ?? []);
+  }
+  // Upstash returns a flat [field, value, field, value, ...] list.
+  const flat = (await command("HGETALL", key)) as unknown[] | null;
+  const result: Record<string, number> = {};
+  if (!Array.isArray(flat)) return result;
+  for (let i = 0; i + 1 < flat.length; i += 2) {
+    result[String(flat[i])] = Number(flat[i + 1]);
+  }
+  return result;
+}
+
 /**
  * Atomic claim, used to make a purchase token single-use. Returns true only for
  * the caller that actually created the key, so a replayed token grants nothing.

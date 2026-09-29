@@ -9,20 +9,48 @@ most collection spreadsheets get abandoned.
 
 ## How logging a car works
 
-There are three paths, and the app picks the fastest one available:
+There are four paths, and the app picks the fastest one available:
 
 1. **A barcode you have scanned before** — the camera reads it and the car is
    added instantly. Zero taps, no network call, no cost. This is the path you
    will be on most of the time once your collection is established.
-2. **A barcode you have not seen** — the app photographs the card and reads it:
-   casting name, series, series number, collector number, year, Mattel toy
-   number, colour, and whether it is a Treasure Hunt. You confirm and save.
-3. **No barcode at all** — loose cars, damaged cards, a car already out of the
+2. **A barcode other collectors have scanned** — the shared barcode database
+   offers the cars they confirmed behind it. One tap adds it, complete, with
+   no photo. (See *The barcode database* below.)
+3. **A barcode nobody has seen** — flip the card and photograph the front. The
+   reader picks out the toy number or the collector number and the **release
+   catalogue** fills in everything else: casting name, series, position in
+   series, collector number, year, Treasure Hunt status. You confirm and save.
+4. **No barcode at all** — loose cars, damaged cards, a car already out of the
    package. Press the shutter and the photo alone is enough; the casting name
    and copyright year on the base of the car are usually readable.
 
-You can always fall back to typing it in, and every identified field stays
-editable before you save.
+There is also **Type a code**: type the toy number printed beside the barcode
+(like `HTB29`) and the catalogue returns the whole record — no camera, no
+identification cost. Every field stays editable before you save.
+
+### The barcode database
+
+Two things people expect from "a barcode database", and how this app does them:
+
+**The release catalogue** (`public/catalogue.json`) is every mainline release
+since 1995 — about 10,700 rows — keyed by Mattel toy number, with collector
+number, casting name, series, series position, year, Treasure Hunt / Super
+Treasure Hunt status and store exclusives. It is built from the
+[Hot Wheels Wiki](https://hotwheels.fandom.com/) yearly lists (CC BY-SA) by
+`node scripts/build-catalogue.mjs`, ships as a static file, and is cached for
+offline use. Re-run the script now and then to pick up new releases; it takes
+about a minute.
+
+**The shared barcode database** is the part nobody can buy, because it does
+not exist anywhere: Mattel prints **one barcode per assortment**, not per car,
+so a barcode -> car table has to be built from what collectors actually find
+behind each barcode. Every time a user confirms a car against a barcode, that
+vote is counted (anonymously: barcode, toy number, name — nothing about the
+user) and the next person to scan the same barcode is offered the cars others
+found. It needs the same Upstash Redis as the free-tier metering, so it is
+live as soon as `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` are set
+(Vercel → Storage → Upstash, one click). Until then the app quietly skips it.
 
 ### Two scanning modes
 

@@ -9,11 +9,13 @@
  * an honest failure, and the queue retries them on its own once back online.
  */
 
-const VERSION = "v1";
+const VERSION = "v2";
 const SHELL = `shell-${VERSION}`;
 const STATIC = `static-${VERSION}`;
 
-const OFFLINE_URLS = ["/", "/scan", "/stats", "/manifest.json"];
+// The catalogue is what makes a scan complete offline, so it is fetched at
+// install rather than on first use.
+const OFFLINE_URLS = ["/", "/scan", "/stats", "/manifest.json", "/catalogue.json"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

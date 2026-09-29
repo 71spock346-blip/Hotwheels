@@ -317,10 +317,21 @@ export default function StatsPage() {
         />
       </div>
 
-      <p className="muted tiny" style={{ marginTop: 20, textAlign: "center" }}>
+      <p className="muted tiny" style={{ marginTop: 20, textAlign: "center", lineHeight: 1.6 }}>
         <Link href="/privacy" style={{ textDecoration: "underline" }}>
           Privacy policy
         </Link>
+        <br />
+        Release catalogue from the{" "}
+        <a
+          href="https://hotwheels.fandom.com/"
+          target="_blank"
+          rel="noreferrer"
+          style={{ textDecoration: "underline" }}
+        >
+          Hot Wheels Wiki
+        </a>{" "}
+        (CC BY-SA). Not affiliated with Mattel.
       </p>
 
       <Toast toast={toast} />
