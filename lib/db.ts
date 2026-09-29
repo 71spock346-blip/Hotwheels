@@ -90,6 +90,23 @@ export async function carsForUpc(upc: string): Promise<Car[]> {
   return cars.filter((car): car is Car => Boolean(car));
 }
 
+export async function allUpcLinks(): Promise<UpcLink[]> {
+  return (await db()).getAll("upcs");
+}
+
+/** Merge links from a backup: union of car ids, never a replacement. */
+export async function mergeUpcLinks(links: UpcLink[]): Promise<void> {
+  const database = await db();
+  const tx = database.transaction("upcs", "readwrite");
+  for (const link of links) {
+    if (!link?.upc || !Array.isArray(link.carIds)) continue;
+    const existing = await tx.store.get(link.upc);
+    const carIds = Array.from(new Set([...(existing?.carIds ?? []), ...link.carIds]));
+    await tx.store.put({ upc: link.upc, carIds, updatedAt: Date.now() });
+  }
+  await tx.done;
+}
+
 export async function linkUpc(upc: string, carId: string): Promise<void> {
   const database = await db();
   const existing = await database.get("upcs", upc);

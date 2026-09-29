@@ -100,11 +100,49 @@ leaves the device is a photo, sent to Anthropic when a car needs identifying.
 The trade-off is that clearing your browser's site data will wipe the
 collection. The **Stats** tab has:
 
-- **Download backup (JSON)** — complete, thumbnails included, restores exactly.
+- **Google Drive backup** — automatic, see below.
+- **Download backup (JSON)** — complete, thumbnails and learned barcodes
+  included, restores exactly.
 - **Export spreadsheet (CSV)** — for Excel, Google Sheets, insurance lists.
-- **Restore from a backup** — merges a backup file back in.
+- **Restore from a backup** — merges a backup file back in; nothing already on
+  the phone is deleted.
 
-Take a backup occasionally, and after any big logging session.
+### Google Drive backup
+
+Once connected, the app keeps one file, `garage-backup.json`, in the hidden
+per-app area of the **user's own** Google Drive (Drive's `appDataFolder`). It
+never shows up among their files, other apps cannot read it, and it never
+touches your server — the phone signs in to Google directly and uploads
+directly. About twenty seconds after the last change, and whenever the app is
+sent to the background, the backup is refreshed. On a new phone, **Stats →
+Restore from Google Drive** brings everything back.
+
+Google access tokens last an hour and the app never opens a sign-in popup on
+its own, so after a long gap the Stats tab will say *Changes waiting* — one tap
+on **Back up now** signs in again and catches up.
+
+Setting it up takes one OAuth client id, in about five minutes:
+
+1. Open [Google Cloud Console](https://console.cloud.google.com/) and create a
+   project (any name).
+2. **APIs & Services → Library**: enable the **Google Drive API**.
+3. **APIs & Services → OAuth consent screen**: External, give it the app name
+   and your email, and add the scope
+   `https://www.googleapis.com/auth/drive.appdata`. This scope is
+   *non-sensitive*, so no verification review is needed — but while the app
+   is in "Testing" only the test users you list can sign in, so either add
+   yourself there or press **Publish app** (which is instant for non-sensitive
+   scopes).
+4. **APIs & Services → Credentials → Create credentials → OAuth client ID**,
+   type **Web application**. Under *Authorised JavaScript origins* add
+   `https://hotwheels-gules.vercel.app` (and `http://localhost:3000` if you
+   want it locally). No redirect URI is needed.
+5. Copy the client id (ends in `.apps.googleusercontent.com`) into Vercel as
+   `NEXT_PUBLIC_GOOGLE_CLIENT_ID` and redeploy. The Stats tab then shows the
+   **Connect Google Drive** button.
+
+If the variable is not set, the section simply says it is not set up and the
+file backups still work.
 
 ## Putting it on the Google Play Store
 

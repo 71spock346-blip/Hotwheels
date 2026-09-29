@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import AutoBackup from "@/components/AutoBackup";
 import QueueRunner from "@/components/QueueRunner";
 import ServiceWorkerRegistrar from "@/components/ServiceWorkerRegistrar";
 import TabBar from "@/components/TabBar";
@@ -33,6 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         {children}
         <QueueRunner />
+        <AutoBackup />
         <ServiceWorkerRegistrar />
         <TabBar />
       </body>

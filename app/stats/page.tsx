@@ -6,8 +6,9 @@ import { FlameMark } from "@/components/icons";
 import { Toast, useToast } from "@/components/Toast";
 import Upgrade from "@/components/Upgrade";
 import { announceChange } from "@/lib/commit";
-import { dequeue, replaceAllCars, updateQueueItem } from "@/lib/db";
-import { download, parseBackupJson, toBackupJson, toCsv } from "@/lib/export";
+import DriveBackup from "@/components/DriveBackup";
+import { allUpcLinks, dequeue, updateQueueItem } from "@/lib/db";
+import { download, mergeBackup, parseBackupJson, toBackupJson, toCsv } from "@/lib/export";
 import { computeSeriesProgress } from "@/lib/series";
 import { computeStats } from "@/lib/stats";
 import { useCollection } from "@/lib/useCollection";
@@ -36,13 +37,10 @@ export default function StatsPage() {
   async function onImport(file: File) {
     setImporting(true);
     try {
-      const imported = parseBackupJson(await file.text());
-      const byId = new Map(cars.map((car) => [car.id, car]));
-      for (const car of imported) byId.set(car.id, car);
-      await replaceAllCars([...byId.values()]);
+      const restored = await mergeBackup(parseBackupJson(await file.text()));
       announceChange();
       await refresh();
-      show(`Restored ${imported.length} car${imported.length === 1 ? "" : "s"}`, "good");
+      show(`Restored ${restored.cars} car${restored.cars === 1 ? "" : "s"}`, "good");
     } catch (error) {
       show(error instanceof Error ? error.message : "Could not read that file.", "bad");
     } finally {
@@ -262,11 +260,13 @@ export default function StatsPage() {
         </>
       )}
 
+      <DriveBackup onMessage={show} onRestored={refresh} />
+
       <h2 className="section-title">Your data</h2>
       <p className="muted small" style={{ marginTop: 0, lineHeight: 1.55 }}>
         The collection lives on this device, in this browser. It works offline and
         nothing is uploaded except the photos sent for identification. That also
-        means clearing site data wipes it — take a backup now and then.
+        means clearing site data wipes it — keep a backup, on Drive or as a file.
       </p>
 
       <div style={{ display: "grid", gap: 10, marginTop: 14 }}>
@@ -274,10 +274,10 @@ export default function StatsPage() {
           type="button"
           className="btn btn-block"
           disabled={!cars.length}
-          onClick={() =>
+          onClick={async () =>
             download(
               `hotwheels-backup-${stamp()}.json`,
-              toBackupJson(cars),
+              toBackupJson(cars, await allUpcLinks()),
               "application/json",
             )
           }

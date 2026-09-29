@@ -7,8 +7,17 @@ import type { Car, Identification } from "./types";
 
 export const COLLECTION_CHANGED = "collection:changed";
 
-export function announceChange(): void {
-  window.dispatchEvent(new CustomEvent(COLLECTION_CHANGED));
+export interface ChangeDetail {
+  /** The change came *from* the backup, so there is nothing new to back up. */
+  backedUp?: boolean;
+}
+
+export function announceChange(detail: ChangeDetail = {}): void {
+  window.dispatchEvent(new CustomEvent<ChangeDetail>(COLLECTION_CHANGED, { detail }));
+}
+
+export function changeDetail(event: Event): ChangeDetail {
+  return (event as CustomEvent<ChangeDetail>).detail ?? {};
 }
 
 export interface CommitResult {
