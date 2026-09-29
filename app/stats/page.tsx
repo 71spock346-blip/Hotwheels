@@ -8,6 +8,7 @@ import Upgrade from "@/components/Upgrade";
 import { announceChange } from "@/lib/commit";
 import { dequeue, replaceAllCars, updateQueueItem } from "@/lib/db";
 import { download, parseBackupJson, toBackupJson, toCsv } from "@/lib/export";
+import { computeSeriesProgress } from "@/lib/series";
 import { computeStats } from "@/lib/stats";
 import { useCollection } from "@/lib/useCollection";
 import {
@@ -23,11 +24,12 @@ export default function StatsPage() {
   const fileInput = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
 
-  const stats = useMemo(() => computeStats(cars), [cars]);
+  const owned = useMemo(() => cars.filter((car) => !car.wanted), [cars]);
+  const stats = useMemo(() => computeStats(owned), [owned]);
   const value = useMemo(() => collectionValue(cars), [cars]);
+  const seriesProgress = useMemo(() => computeSeriesProgress(owned), [owned]);
   const [estimating, setEstimating] = useState<EstimateProgress | null>(null);
   const stuck = queue.filter((item) => item.status === "failed" && item.attempts >= 3);
-  const maxSeries = stats.topSeries[0]?.count ?? 1;
 
   const stamp = () => new Date().toISOString().slice(0, 10);
 
@@ -148,21 +150,52 @@ export default function StatsPage() {
 
       <Upgrade onMessage={show} />
 
-      {stats.topSeries.length > 0 && (
+      {seriesProgress.length > 0 && (
         <>
-          <h2 className="section-title">Biggest series</h2>
-          {stats.topSeries.map((entry) => (
-            <div key={entry.label} className="bar">
-              <div>
-                {entry.label}
-                <div className="bar-track">
-                  <div
-                    className="bar-fill"
-                    style={{ width: `${(entry.count / maxSeries) * 100}%` }}
-                  />
-                </div>
+          <h2 className="section-title">Series completion</h2>
+          <p className="muted small" style={{ marginTop: 0, lineHeight: 1.5 }}>
+            Worked out from the &ldquo;3/10&rdquo; printed on each card — no
+            catalogue needed. Nearly-finished series first.
+          </p>
+          {seriesProgress.map((series) => (
+            <div key={series.key} className="card" style={{ marginBottom: 10 }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: 10,
+                  alignItems: "baseline",
+                }}
+              >
+                <b style={{ fontSize: 15 }}>
+                  {series.name}
+                  {series.year ? ` · ${series.year}` : ""}
+                </b>
+                <b style={{ color: series.complete ? "var(--green)" : "var(--ink)" }}>
+                  {series.ownedPositions.length}/{series.total}
+                  {series.complete && " ✓"}
+                </b>
               </div>
-              <b>{entry.count}</b>
+              <div className="bar-track" style={{ marginTop: 8 }}>
+                <div
+                  className="bar-fill"
+                  style={{
+                    width: `${(series.ownedPositions.length / series.total) * 100}%`,
+                    background: series.complete ? "var(--green)" : undefined,
+                  }}
+                />
+              </div>
+              {!series.complete && (
+                <p className="muted small" style={{ margin: "8px 0 0", lineHeight: 1.5 }}>
+                  Still hunting: {series.missing.map((n) => `${n}/${series.total}`).join(", ")}
+                </p>
+              )}
+              {series.unplaced > 0 && (
+                <p className="muted tiny" style={{ margin: "6px 0 0" }}>
+                  Plus {series.unplaced} in this series without a readable
+                  series number — fill it in on the car to place them.
+                </p>
+              )}
             </div>
           ))}
         </>

@@ -19,9 +19,10 @@ export default function CarRow({ car }: { car: Car }) {
     car.treasureHunt === "sth" ? " is-sth"
     : car.treasureHunt === "th" ? " is-th"
     : "";
+  const wantedClass = car.wanted ? " is-wanted" : "";
 
   return (
-    <Link href={`/car/${car.id}`} className={`car${huntClass}`}>
+    <Link href={`/car/${car.id}`} className={`car${huntClass}${wantedClass}`}>
       {car.thumbnail ?
         // Local data URLs from IndexedDB; next/image would add no value here.
         // eslint-disable-next-line @next/next/no-img-element
@@ -38,7 +39,11 @@ export default function CarRow({ car }: { car: Car }) {
         </div>
         <div className="car-meta">{carSubtitle(car) || "No details yet"}</div>
       </div>
-      {car.quantity > 1 && <div className="qty">×{car.quantity}</div>}
+      {car.wanted ?
+        <div className="qty is-want">WANT</div>
+      : car.quantity > 1 ?
+        <div className="qty">×{car.quantity}</div>
+      : null}
     </Link>
   );
 }

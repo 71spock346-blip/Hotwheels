@@ -287,9 +287,14 @@ export default function ScanPage() {
       const known = await carsForUpc(upc);
 
       if (known.length === 1) {
-        const updated = await addAnother(known[0]);
-        vibrate(30);
-        show(`${updated.name} — now ×${updated.quantity}`, "good");
+        const taken = await addAnother(known[0]);
+        vibrate(taken.fromWishlist ? [40, 60, 40] : 30);
+        show(
+          taken.fromWishlist ?
+            `${taken.car.name} — off the wishlist, it's yours!`
+          : `${taken.car.name} — now ×${taken.car.quantity}`,
+          "good",
+        );
         return;
       }
 
@@ -375,8 +380,13 @@ export default function ScanPage() {
 
     const known = await carsForUpc(upc);
     if (known.length === 1) {
-      const updated = await addAnother(known[0]);
-      show(`${updated.name} — now ×${updated.quantity}`, "good");
+      const taken = await addAnother(known[0]);
+      show(
+        taken.fromWishlist ?
+          `${taken.car.name} — off the wishlist, it's yours!`
+        : `${taken.car.name} — now ×${taken.car.quantity}`,
+        "good",
+      );
       return;
     }
     if (known.length > 1) {
@@ -404,7 +414,7 @@ export default function ScanPage() {
 
   /* -------------------------------------------------------------- save --- */
 
-  const savePending = useCallback(async () => {
+  const savePending = useCallback(async (asWishlist = false) => {
     if (!pending) return;
     const { draft, thumbnail, confidence } = pending;
     if (!draft.name.trim()) {
@@ -425,10 +435,65 @@ export default function ScanPage() {
       color: draft.color,
     });
 
+    // Wishing for a car already on the wishlist just freshens its details;
+    // wishing for one already owned is caught before the button is shown.
+    if (asWishlist && !existing) {
+      const wish: Car = {
+        id: newId(),
+        name: draft.name.trim(),
+        series: draft.series,
+        seriesNumber: draft.seriesNumber,
+        collectorNumber: draft.collectorNumber,
+        year: draft.year,
+        toyNumber: draft.toyNumber,
+        color: draft.color,
+        treasureHunt: draft.treasureHunt,
+        condition: draft.condition,
+        quantity: 1,
+        notes: draft.notes,
+        thumbnail,
+        upc,
+        confidence,
+        wanted: true,
+        source: upc ? "barcode" : "photo",
+        addedAt: now,
+        updatedAt: now,
+      };
+      try {
+        await putCar(wish);
+        if (upc) await linkUpc(upc, wish.id);
+      } catch (error) {
+        setPending({
+          ...pending,
+          saveError:
+            error instanceof Error ?
+              `Could not save: ${error.message}`
+            : "Could not save to this device's storage.",
+        });
+        return;
+      }
+      announceChange();
+      setPending(null);
+      show(`${wish.name} added to the wishlist`, "good");
+      return;
+    }
+
+    if (asWishlist && existing?.wanted) {
+      setPending(null);
+      show(`${existing.name} is already on your wishlist`, "good");
+      return;
+    }
+
     if (existing) {
+      const fromWishlist = Boolean(existing.wanted);
       const merged: Car = {
         ...existing,
-        quantity: existing.quantity + draft.quantity,
+        wanted: false,
+        addedAt: fromWishlist ? now : existing.addedAt,
+        quantity:
+          fromWishlist ?
+            Math.max(1, draft.quantity)
+          : existing.quantity + draft.quantity,
         // Backfill gaps from the fresh read without clobbering saved data.
         series: existing.series ?? draft.series,
         seriesNumber: existing.seriesNumber ?? draft.seriesNumber,
@@ -457,7 +522,12 @@ export default function ScanPage() {
       announceChange();
       setPending(null);
       vibrate(30);
-      show(`${merged.name} — already in the garage, now ×${merged.quantity}`, "good");
+      show(
+        fromWishlist ?
+          `${merged.name} — off the wishlist, it's yours!`
+        : `${merged.name} — already in the garage, now ×${merged.quantity}`,
+        "good",
+      );
       return;
     }
 
@@ -707,9 +777,14 @@ export default function ScanPage() {
                   className="car"
                   style={{ textAlign: "left", width: "100%" }}
                   onClick={async () => {
-                    const updated = await addAnother(car);
+                    const taken = await addAnother(car);
                     setPicker(null);
-                    show(`${updated.name} — now ×${updated.quantity}`, "good");
+                    show(
+                      taken.fromWishlist ?
+                        `${taken.car.name} — off the wishlist, it's yours!`
+                      : `${taken.car.name} — now ×${taken.car.quantity}`,
+                      "good",
+                    );
                   }}
                 >
                   {car.thumbnail ?
@@ -770,9 +845,17 @@ export default function ScanPage() {
 
             {pending.matched && (
               <p className="notice notice-good">
-                Looks like <b>{pending.matched.name}</b>, already in your garage
-                (×{pending.matched.quantity}). Saving adds another instead of
-                creating a duplicate entry.
+                {pending.matched.wanted ?
+                  <>
+                    <b>{pending.matched.name}</b> is on your wishlist! Saving
+                    marks it found and moves it into the garage.
+                  </>
+                : <>
+                    Looks like <b>{pending.matched.name}</b>, already in your
+                    garage (×{pending.matched.quantity}). Saving adds another
+                    instead of creating a duplicate entry.
+                  </>
+                }
               </p>
             )}
 
@@ -817,6 +900,16 @@ export default function ScanPage() {
                 Discard
               </button>
             </div>
+            {!pending.matched && (
+              <button
+                type="button"
+                className="btn btn-ghost btn-block"
+                style={{ marginTop: 10 }}
+                onClick={() => void savePending(true)}
+              >
+                Don&rsquo;t own it yet — add to wishlist
+              </button>
+            )}
           </div>
         </div>
       )}

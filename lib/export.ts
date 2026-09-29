@@ -13,6 +13,7 @@ const CSV_COLUMNS = [
   "treasureHunt",
   "condition",
   "quantity",
+  "wanted",
   "upc",
   "value",
   "estimateLowUsd",

@@ -32,7 +32,10 @@ export async function commitIdentification(
   if (existing) {
     const merged: Car = {
       ...existing,
-      quantity: existing.quantity + 1,
+      // A wishlist match becomes owned; an owned match becomes one more.
+      wanted: false,
+      addedAt: existing.wanted ? Date.now() : existing.addedAt,
+      quantity: existing.wanted ? Math.max(1, existing.quantity) : existing.quantity + 1,
       // Backfill anything the earlier scan missed, without overwriting good data.
       series: existing.series ?? identification.series ?? undefined,
       seriesNumber: existing.seriesNumber ?? identification.seriesNumber ?? undefined,
@@ -57,12 +60,25 @@ export async function commitIdentification(
   return { car, wasDuplicate: false };
 }
 
-/** Bump the count on a car the barcode already resolved to. */
-export async function addAnother(car: Car): Promise<Car> {
-  const updated = { ...car, quantity: car.quantity + 1 };
+export interface TakeResult {
+  car: Car;
+  /** True when this scan crossed a car off the wishlist. */
+  fromWishlist: boolean;
+}
+
+/**
+ * The scan resolved to a car we know. Owned: one more of it. On the wishlist:
+ * the hunt is over — it becomes owned, which is the whole point of scanning a
+ * peg in a store.
+ */
+export async function addAnother(car: Car): Promise<TakeResult> {
+  const updated: Car =
+    car.wanted ?
+      { ...car, wanted: false, quantity: Math.max(1, car.quantity), addedAt: Date.now() }
+    : { ...car, quantity: car.quantity + 1 };
   await putCar(updated);
   announceChange();
-  return updated;
+  return { car: updated, fromWishlist: Boolean(car.wanted) };
 }
 
 export async function identify(

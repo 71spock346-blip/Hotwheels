@@ -37,6 +37,11 @@ export interface Car {
   value?: number;
   /** Rough market range per unit, in USD, from the estimator. */
   estimate?: { low: number; high: number; at: number };
+  /**
+   * True while this car is hunted rather than owned. A wishlist entry lives in
+   * the same store so a scan can recognise it instantly and flip it to owned.
+   */
+  wanted?: boolean;
   source: CarSource;
   addedAt: number;
   updatedAt: number;

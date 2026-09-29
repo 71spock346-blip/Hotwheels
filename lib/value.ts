@@ -26,6 +26,7 @@ export function collectionValue(cars: Car[]): ValueTotals {
   let high = 0;
   let unvalued = 0;
   for (const car of cars) {
+    if (car.wanted) continue; // a wish is not worth money yet
     const range = carValueRange(car);
     if (!range) {
       unvalued += 1;
@@ -60,7 +61,7 @@ export async function estimateMissing(
 ): Promise<{ estimated: number; error?: string }> {
   const cars = await allCars();
   const targets = cars.filter(
-    (car) => (options.force || !car.estimate) && car.value === undefined,
+    (car) => !car.wanted && (options.force || !car.estimate) && car.value === undefined,
   );
   if (!targets.length) return { estimated: 0 };
 

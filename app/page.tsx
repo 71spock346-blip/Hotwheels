@@ -7,21 +7,23 @@ import { FlameMark } from "@/components/icons";
 import { useCollection } from "@/lib/useCollection";
 import { computeStats, searchCars } from "@/lib/stats";
 
-type Filter = "all" | "dupes" | "hunts";
+type Filter = "all" | "dupes" | "hunts" | "wishlist";
 
 export default function CollectionPage() {
   const { cars, queue, loading } = useCollection();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
 
-  const stats = useMemo(() => computeStats(cars), [cars]);
+  const owned = useMemo(() => cars.filter((car) => !car.wanted), [cars]);
+  const wishlist = useMemo(() => cars.filter((car) => car.wanted), [cars]);
+  const stats = useMemo(() => computeStats(owned), [owned]);
 
   const visible = useMemo(() => {
-    let list = searchCars(cars, query);
+    let list = searchCars(filter === "wishlist" ? wishlist : owned, query);
     if (filter === "dupes") list = list.filter((car) => car.quantity > 1);
     if (filter === "hunts") list = list.filter((car) => car.treasureHunt !== "none");
     return list;
-  }, [cars, query, filter]);
+  }, [owned, wishlist, query, filter]);
 
   const working = queue.filter((item) => item.status !== "failed").length;
   const failed = queue.filter(
@@ -90,6 +92,7 @@ export default function CollectionPage() {
                 ["all", "All"],
                 ["dupes", "Duplicates"],
                 ["hunts", "Hunts"],
+                ["wishlist", wishlist.length ? `Wishlist (${wishlist.length})` : "Wishlist"],
               ] as Array<[Filter, string]>
             ).map(([value, label]) => (
               <button

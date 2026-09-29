@@ -189,6 +189,29 @@ export default function CarPage() {
       </p>
 
       <div style={{ marginTop: 22 }}>
+        <button
+          type="button"
+          className={`btn btn-block${car.wanted ? " btn-primary" : ""}`}
+          style={{ marginBottom: 10 }}
+          onClick={async () => {
+            const updated: Car =
+              car.wanted ?
+                { ...car, wanted: false, addedAt: Date.now() }
+              : { ...car, wanted: true };
+            await putCar(updated);
+            setCar(updated);
+            announceChange();
+            show(
+              updated.wanted ?
+                "Moved to the wishlist — a scan will bring it back."
+              : "It's yours — moved to the garage.",
+              "good",
+            );
+          }}
+        >
+          {car.wanted ? "I found it — move to garage" : "Move to wishlist"}
+        </button>
+
         {confirmingDelete ?
           <div className="card">
             <p className="small" style={{ marginTop: 0 }}>
