@@ -3,8 +3,8 @@ import Link from "next/link";
 import { ChevronLeftIcon } from "@/components/icons";
 
 export const metadata: Metadata = {
-  title: "Privacy — Garage",
-  description: "What Garage does and does not do with your data.",
+  title: "Privacy — MONEYHOLE",
+  description: "What MONEYHOLE does and does not do with your data.",
 };
 
 /**
@@ -32,7 +32,7 @@ export default function PrivacyPage() {
       </p>
 
       <p className="small" style={{ lineHeight: 1.6 }}>
-        Garage is a tool for cataloguing a die-cast car collection. It has no
+        MONEYHOLE is a tool for cataloguing a die-cast car collection. It has no
         accounts, no logins and no analytics, and it does not sell or share
         personal information.
       </p>
@@ -76,7 +76,7 @@ export default function PrivacyPage() {
 
       <h2 className="section-title">Children</h2>
       <p className="small" style={{ lineHeight: 1.6, marginTop: 0 }}>
-        Garage is not directed at children and does not knowingly collect
+        MONEYHOLE is not directed at children and does not knowingly collect
         personal information from anyone.
       </p>
 

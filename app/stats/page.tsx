@@ -278,7 +278,7 @@ export default function StatsPage() {
           disabled={!cars.length}
           onClick={async () =>
             download(
-              `hotwheels-backup-${stamp()}.json`,
+              `moneyhole-backup-${stamp()}.json`,
               toBackupJson(cars, await allUpcLinks()),
               "application/json",
             )
@@ -292,7 +292,7 @@ export default function StatsPage() {
           className="btn btn-block"
           disabled={!cars.length}
           onClick={() =>
-            download(`hotwheels-${stamp()}.csv`, toCsv(cars), "text/csv;charset=utf-8")
+            download(`moneyhole-${stamp()}.csv`, toCsv(cars), "text/csv;charset=utf-8")
           }
         >
           Export spreadsheet (CSV)

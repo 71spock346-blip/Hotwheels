@@ -46,7 +46,7 @@ export default function Splash() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/icon-192.png" alt="" />
       </div>
-      <div className="splash-name">Garage</div>
+      <div className="splash-name">Moneyhole</div>
     </div>
   );
 }

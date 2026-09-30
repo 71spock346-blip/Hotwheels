@@ -7,11 +7,11 @@ import TabBar from "@/components/TabBar";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Garage — Hot Wheels Tracker",
+  title: "MONEYHOLE — Die-cast collection tracker",
   description:
     "Point your phone at a Hot Wheels card and it lands in your collection. Barcode scanning, photo identification, duplicate tracking and export.",
   manifest: "/manifest.json",
-  appleWebApp: { capable: true, title: "Garage", statusBarStyle: "black" },
+  appleWebApp: { capable: true, title: "MONEYHOLE", statusBarStyle: "black" },
   icons: {
     icon: [
       { url: "/icon-192.png", sizes: "192x192", type: "image/png" },

@@ -1,4 +1,4 @@
-# Garage — a Hot Wheels collection tracker
+# MONEYHOLE — a Hot Wheels collection tracker
 
 Point your phone at a card. The car ends up in your collection.
 
