@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import AutoBackup from "@/components/AutoBackup";
 import QueueRunner from "@/components/QueueRunner";
 import ServiceWorkerRegistrar from "@/components/ServiceWorkerRegistrar";
+import Splash from "@/components/Splash";
 import TabBar from "@/components/TabBar";
 import "./globals.css";
 
@@ -31,7 +32,17 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        {/* Decide about the splash before first paint, so it never pops in
+            over an already-drawn page. Installed app, once per launch. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{if((matchMedia("(display-mode: standalone)").matches||matchMedia("(display-mode: fullscreen)").matches||navigator.standalone)&&!sessionStorage.getItem("garage:splashed")){document.documentElement.dataset.splash="1";sessionStorage.setItem("garage:splashed","1")}}catch(e){}`,
+          }}
+        />
+      </head>
       <body>
+        <Splash />
         {children}
         <QueueRunner />
         <AutoBackup />

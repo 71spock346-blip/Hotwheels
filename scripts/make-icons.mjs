@@ -15,6 +15,14 @@ import { fileURLToPath } from "node:url";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const SOURCE = join(ROOT, "public", "icon-source.png");
 const SIZES = [192, 512];
+/**
+ * Android's adaptive-icon mask (and Chrome's splash) crops up to 10% off each
+ * edge, and circular launchers more. The maskable variant scales the artwork
+ * down onto the app background so the gold frame survives the crop; the
+ * plain "any" icon stays edge to edge.
+ */
+const MASKABLE_SCALE = 0.7;
+const BACKGROUND = "#0d0d10";
 
 const dataUrl = `data:image/png;base64,${readFileSync(SOURCE).toString("base64")}`;
 
@@ -68,6 +76,31 @@ for (const size of SIZES) {
   const file = join(ROOT, "public", `icon-${size}.png`);
   writeFileSync(file, Buffer.from(png, "base64"));
   console.log(`wrote ${file}`);
+
+  const maskable = await page.evaluate(async ({ src, crop, size, scale, background }) => {
+    const img = new Image();
+    img.src = src;
+    await img.decode();
+    const c = document.createElement("canvas");
+    c.width = size; c.height = size;
+    const ctx = c.getContext("2d");
+    ctx.fillStyle = background;
+    ctx.fillRect(0, 0, size, size);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    const inner = Math.round(size * scale);
+    const offset = Math.round((size - inner) / 2);
+    // Rounded corners on the artwork itself, so a square mask still shows a tile.
+    const r = inner * 0.18;
+    ctx.beginPath();
+    ctx.roundRect(offset, offset, inner, inner, r);
+    ctx.clip();
+    ctx.drawImage(img, crop.x, crop.y, crop.side, crop.side, offset, offset, inner, inner);
+    return c.toDataURL("image/png").split(",")[1];
+  }, { src: dataUrl, crop, size, scale: MASKABLE_SCALE, background: BACKGROUND });
+  const maskFile = join(ROOT, "public", `icon-maskable-${size}.png`);
+  writeFileSync(maskFile, Buffer.from(maskable, "base64"));
+  console.log(`wrote ${maskFile}`);
 }
 
 await browser.close();
