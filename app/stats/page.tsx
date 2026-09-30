@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
-import { FlameMark } from "@/components/icons";
+import { CheckIcon, FlameMark } from "@/components/icons";
 import { Toast, useToast } from "@/components/Toast";
 import Upgrade from "@/components/Upgrade";
 import { announceChange } from "@/lib/commit";
@@ -171,7 +171,9 @@ export default function StatsPage() {
                 </b>
                 <b style={{ color: series.complete ? "var(--green)" : "var(--ink)" }}>
                   {series.ownedPositions.length}/{series.total}
-                  {series.complete && " ✓"}
+                  {series.complete && (
+                    <CheckIcon style={{ width: 14, height: 14, verticalAlign: "-2px", marginLeft: 4 }} />
+                  )}
                 </b>
               </div>
               <div className="bar-track" style={{ marginTop: 8 }}>

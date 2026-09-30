@@ -7,7 +7,15 @@ import CarFields, {
   type CarDraft,
 } from "@/components/CarFields";
 import CatalogueHint, { applyRelease } from "@/components/CatalogueHint";
-import { FlameMark } from "@/components/icons";
+import {
+  CarIcon,
+  CheckIcon,
+  FlameMark,
+  GalleryIcon,
+  KeyboardIcon,
+  PencilIcon,
+  TorchIcon,
+} from "@/components/icons";
 import { Toast, useToast } from "@/components/Toast";
 import { carSubtitle } from "@/components/CarRow";
 import { createScanner, normaliseBarcode, type Scanner } from "@/lib/barcode";
@@ -774,20 +782,26 @@ export default function ScanPage() {
       : <>
           <div className="viewfinder">
             <video ref={videoRef} playsInline muted autoPlay />
-            <div className="reticle" />
-            <div className="scan-hint">
+            <div className={`reticle${armedUpc ? " is-armed" : ""}`}>
+              <span />
+              <span />
+              <span />
+              <span />
+              <div className="scanline" />
+            </div>
+            <div className={`scan-hint${armedUpc ? " is-armed" : ""}`}>
               {busy ? "Reading the card…"
               : armedUpc ?
-                `Got barcode ${armedUpc} — flip to the FRONT and press the shutter`
+                `Barcode ${armedUpc} — now the front, then the shutter`
               : liveBarcode ? `Barcode ${liveBarcode}`
               : status === "starting" ? "Starting camera…"
-              : "Scan the barcode on the back, or just press the shutter"}
+              : "Barcode on the back, or the shutter on the front"}
             </div>
           </div>
 
           <div className="shutter-row">
-            <label className="side-action" title="Pick from library">
-              🖼
+            <label className="side-action" title="Pick from library" aria-label="Pick from library">
+              <GalleryIcon />
               <input
                 type="file"
                 accept="image/*"
@@ -807,7 +821,7 @@ export default function ScanPage() {
               disabled={status !== "ready" || busy}
               aria-label="Capture card"
             >
-              {busy ? <span className="spinner" /> : "◉"}
+              {busy ? <span className="spinner" /> : <span className="shutter-core" />}
             </button>
 
             {torch.available ?
@@ -817,8 +831,9 @@ export default function ScanPage() {
                 onClick={() => void toggleTorch()}
                 aria-pressed={torch.on}
                 title="Torch"
+                aria-label="Torch"
               >
-                {torch.on ? "🔦" : "💡"}
+                <TorchIcon on={torch.on} />
               </button>
             : <span className="side-action" style={{ visibility: "hidden" }} />}
           </div>
@@ -829,6 +844,7 @@ export default function ScanPage() {
               className="btn btn-block btn-ghost"
               onClick={() => setTypedBarcode("")}
             >
+              <KeyboardIcon />
               Type a code
             </button>
             <button
@@ -836,22 +852,23 @@ export default function ScanPage() {
               className="btn btn-block btn-ghost"
               onClick={() => setPending({ draft: { ...BLANK_DRAFT } })}
             >
+              <PencilIcon />
               Add by hand
             </button>
           </div>
 
           <div className="card" style={{ marginTop: 4 }}>
-            <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+            <div className="segmented" style={{ marginBottom: 10 }}>
               <button
                 type="button"
-                className={`btn btn-block${mode === "confirm" ? " btn-primary" : " btn-ghost"}`}
+                aria-pressed={mode === "confirm"}
                 onClick={() => setMode("confirm")}
               >
                 Confirm each
               </button>
               <button
                 type="button"
-                className={`btn btn-block${mode === "rapid" ? " btn-primary" : " btn-ghost"}`}
+                aria-pressed={mode === "rapid"}
                 onClick={() => setMode("rapid")}
               >
                 Rapid fire
@@ -962,7 +979,10 @@ export default function ScanPage() {
                   {car.thumbnail ?
                     // eslint-disable-next-line @next/next/no-img-element
                     <img className="car-thumb" src={car.thumbnail} alt="" />
-                  : <div className="car-thumb is-empty">⚙</div>}
+                  : <div className="car-thumb is-empty">
+                      <CarIcon />
+                    </div>
+                  }
                   <div>
                     <div className="car-name">{car.name}</div>
                     <div className="car-meta">{carSubtitle(car)}</div>
@@ -1008,7 +1028,9 @@ export default function ScanPage() {
                   style={{ textAlign: "left", width: "100%" }}
                   onClick={() => void pickCandidate(candidates, item)}
                 >
-                  <div className="car-thumb is-empty">⚙</div>
+                  <div className="car-thumb is-empty">
+                    <CarIcon />
+                  </div>
                   <div style={{ minWidth: 0 }}>
                     <div className="car-name">{item.release?.name ?? item.name}</div>
                     <div className="car-meta">
@@ -1098,7 +1120,8 @@ export default function ScanPage() {
             <p className="muted small" style={{ marginTop: 2, marginBottom: 14 }}>
               {pending.catalogue ?
                 <span className="confidence">
-                  ✓ Confirmed by the catalogue
+                  <CheckIcon />
+                  Confirmed by the catalogue
                   {pending.catalogue === "toy" ? " (toy number)"
                   : pending.catalogue === "collector" ? " (collector number)"
                   : ""}

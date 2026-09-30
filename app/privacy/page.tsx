@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ChevronLeftIcon } from "@/components/icons";
 
 export const metadata: Metadata = {
   title: "Privacy — Garage",
@@ -20,7 +21,8 @@ export default function PrivacyPage() {
     <main className="shell">
       <header className="topbar">
         <Link href="/" className="btn btn-ghost">
-          ← Garage
+          <ChevronLeftIcon />
+          Garage
         </Link>
       </header>
 

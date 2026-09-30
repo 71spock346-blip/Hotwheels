@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CarIcon } from "@/components/icons";
 import type { Car } from "@/lib/types";
 
 export function carSubtitle(car: Car): string {
@@ -28,7 +29,7 @@ export default function CarRow({ car }: { car: Car }) {
         // eslint-disable-next-line @next/next/no-img-element
         <img className="car-thumb" src={car.thumbnail} alt="" />
       : <div className="car-thumb is-empty" aria-hidden="true">
-          ⚙
+          <CarIcon />
         </div>
       }
       <div>

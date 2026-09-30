@@ -1,5 +1,6 @@
 "use client";
 
+import { AlertIcon, CheckIcon } from "@/components/icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export type ToastTone = "good" | "bad" | "plain";
@@ -34,8 +35,8 @@ export function Toast({ toast }: { toast: ToastState | null }) {
     : "";
   return (
     <div className={`toast${toneClass}`} role="status" aria-live="polite">
-      <span aria-hidden="true">
-        {toast.tone === "good" ? "✓" : toast.tone === "bad" ? "!" : "•"}
+      <span className="toast-icon" aria-hidden="true">
+        {toast.tone === "good" ? <CheckIcon /> : toast.tone === "bad" ? <AlertIcon /> : null}
       </span>
       {toast.message}
     </div>

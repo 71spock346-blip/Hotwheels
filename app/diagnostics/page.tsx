@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CheckIcon, ChevronLeftIcon, CloseIcon } from "@/components/icons";
 import { useCallback, useEffect, useState } from "react";
 import { Toast, useToast } from "@/components/Toast";
 import { allCars, newId, putCar, deleteCar, queueItems } from "@/lib/db";
@@ -174,7 +175,8 @@ export default function DiagnosticsPage() {
     <main className="shell">
       <header className="topbar">
         <Link href="/scan" className="btn btn-ghost">
-          ← Scan
+          <ChevronLeftIcon />
+          Scan
         </Link>
         <button type="button" className="btn" onClick={() => void run()} disabled={running}>
           {running ? "Checking…" : "Re-run"}
@@ -196,8 +198,15 @@ export default function DiagnosticsPage() {
                 {check.value}
               </div>
             </div>
-            <b style={{ color: check.ok === false ? "var(--danger)" : "var(--green)" }}>
-              {check.ok === false ? "✕" : "✓"}
+            <b
+              style={{
+                color: check.ok === false ? "var(--danger)" : "var(--green)",
+                display: "inline-flex",
+                width: 20,
+                height: 20,
+              }}
+            >
+              {check.ok === false ? <CloseIcon /> : <CheckIcon />}
             </b>
           </div>
         ))}

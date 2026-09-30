@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { CarDraft } from "@/components/CarFields";
+import { CloseIcon } from "@/components/icons";
 import {
   loadCatalogue,
   releaseSubtitle,
@@ -87,7 +88,7 @@ export default function CatalogueHint({
             aria-label="Dismiss"
             onClick={() => setDismissed(key)}
           >
-            ✕
+            <CloseIcon />
           </button>
         </div>
       </div>

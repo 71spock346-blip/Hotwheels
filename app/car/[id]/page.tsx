@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import CarFields, { draftFromCar, type CarDraft } from "@/components/CarFields";
 import CatalogueHint from "@/components/CatalogueHint";
+import { CameraIcon, ChevronLeftIcon, GalleryIcon } from "@/components/icons";
 import { Toast, useToast } from "@/components/Toast";
 import { announceChange } from "@/lib/commit";
 import { deleteCar, getCar, putCar } from "@/lib/db";
@@ -119,7 +120,8 @@ export default function CarPage() {
     <main className="shell">
       <header className="topbar">
         <Link href="/" className="btn btn-ghost">
-          ← Garage
+          <ChevronLeftIcon />
+          Garage
         </Link>
         <button type="button" className="btn btn-primary" onClick={() => void save()}>
           Save
@@ -144,7 +146,8 @@ export default function CarPage() {
 
       <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
         <label className="btn btn-block">
-          📷 {car.thumbnail ? "Retake photo" : "Take a photo"}
+          <CameraIcon />
+          {car.thumbnail ? "Retake photo" : "Take a photo"}
           <input
             type="file"
             accept="image/*"
@@ -158,6 +161,7 @@ export default function CarPage() {
           />
         </label>
         <label className="btn btn-block btn-ghost">
+          <GalleryIcon />
           From library
           <input
             type="file"
