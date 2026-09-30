@@ -24,7 +24,9 @@ export default function TabBar() {
             className={`tab${active ? " is-active" : ""}`}
             aria-current={active ? "page" : undefined}
           >
-            <Icon />
+            <span className="tab-icon">
+              <Icon active={active} />
+            </span>
             {label}
           </Link>
         );

@@ -707,28 +707,65 @@ a {
 }
 
 .tab {
+  position: relative;
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: 4px;
   font-size: 10.5px;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
   background: none;
   border: none;
+  transition: color 0.15s ease;
 }
 
-.tab svg {
-  width: 21px;
-  height: 21px;
+.tab-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 30px;
+  border-radius: 10px;
+  transition:
+    background 0.15s ease,
+    transform 0.15s ease;
+}
+
+.tab-icon svg {
+  width: 25px;
+  height: 25px;
+}
+
+/* A gold keyline above the active tab, in place of a coloured label alone. */
+.tab::before {
+  content: "";
+  position: absolute;
+  top: -2px;
+  left: 50%;
+  width: 0;
+  height: 3px;
+  transform: translateX(-50%);
+  border-radius: 0 0 3px 3px;
+  background: var(--gold);
+  box-shadow: 0 0 10px var(--gold-glow);
+  transition: width 0.18s ease;
 }
 
 .tab.is-active {
   color: var(--gold);
+}
+
+.tab.is-active::before {
+  width: 36px;
+}
+
+.tab.is-active .tab-icon {
+  background: rgba(244, 201, 93, 0.1);
+  transform: translateY(-1px);
 }
 
 /* -------------------------------------------------------------- queue --- */

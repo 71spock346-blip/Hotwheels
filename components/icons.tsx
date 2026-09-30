@@ -30,28 +30,47 @@ function Icon({ children, ...props }: IconProps) {
   );
 }
 
-export function GarageIcon(props: IconProps) {
+/**
+ * Tab icons. Two states drawn as one shape: the outline always, plus a soft
+ * fill and a heavier stroke when the tab is active, so the bar reads as
+ * "you are here" without a separate filled icon set.
+ */
+type TabIconProps = IconProps & { active?: boolean };
+
+function tabProps(active: boolean | undefined): IconProps {
+  return active ? { strokeWidth: 2.1 } : { strokeWidth: 1.7 };
+}
+
+export function GarageIcon({ active, ...props }: TabIconProps) {
   return (
-    <Icon {...props}>
-      <path d="M3 10 12 4l9 6v10H3V10Z" />
-      <path d="M7 20v-5h10v5M7 17h10" />
+    <Icon {...tabProps(active)} {...props}>
+      {active && <path d="M2.5 9.5 12 3l9.5 6.5V20a1 1 0 0 1-1 1h-17a1 1 0 0 1-1-1V9.5Z" fill="currentColor" fillOpacity="0.18" stroke="none" />}
+      <path d="M2.5 9.5 12 3l9.5 6.5V20a1 1 0 0 1-1 1h-17a1 1 0 0 1-1-1V9.5Z" />
+      <path d="M7 21v-9.5h10V21" />
+      <path d="M7 14.5h10M7 17.5h10" />
     </Icon>
   );
 }
 
-export function ScanIcon(props: IconProps) {
+export function ScanIcon({ active, ...props }: TabIconProps) {
   return (
-    <Icon {...props}>
-      <path d="M3 8V5a2 2 0 0 1 2-2h3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M21 16v3a2 2 0 0 1-2 2h-3" />
-      <path d="M3 12h18" />
+    <Icon {...tabProps(active)} {...props}>
+      {active && <rect x="3" y="3" width="18" height="18" rx="3.5" fill="currentColor" fillOpacity="0.18" stroke="none" />}
+      <path d="M3 8.5V6.5A3.5 3.5 0 0 1 6.5 3h2M21 8.5V6.5A3.5 3.5 0 0 0 17.5 3h-2M3 15.5v2A3.5 3.5 0 0 0 6.5 21h2M21 15.5v2a3.5 3.5 0 0 1-3.5 3.5h-2" />
+      <path d="M7.5 8.5v7M10.5 8.5v7M13 8.5v7M16.5 8.5v7" />
     </Icon>
   );
 }
 
-export function ChartIcon(props: IconProps) {
+export function ChartIcon({ active, ...props }: TabIconProps) {
+  // A podium: the tallest step in the middle, the way a race result is shown.
+  const steps = "M2.5 20.5V13a1.5 1.5 0 0 1 1.5-1.5h4.5V20.5M8.5 20.5V6A1.5 1.5 0 0 1 10 4.5h4A1.5 1.5 0 0 1 15.5 6v14.5M15.5 20.5V15a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 21.5 15v5.5";
   return (
-    <Icon {...props}>
-      <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+    <Icon {...tabProps(active)} {...props}>
+      {active && <path d={`${steps}H2.5Z`} fill="currentColor" fillOpacity="0.18" stroke="none" />}
+      <path d={steps} />
+      <path d="M2 20.5h20" />
+      <path d="M12 8v4.5M10.6 9.4 12 8l1.4 1.4" />
     </Icon>
   );
 }
