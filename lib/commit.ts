@@ -56,6 +56,8 @@ export async function commitIdentification(
       toyNumber: existing.toyNumber ?? identification.toyNumber ?? undefined,
       color: existing.color ?? identification.color ?? undefined,
       thumbnail: existing.thumbnail ?? extras.thumbnail,
+      photoSource:
+        existing.thumbnail ? existing.photoSource : extras.thumbnail ? "scan" : undefined,
       upc: existing.upc ?? extras.upc,
     };
     await putCar(merged);

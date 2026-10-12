@@ -6,9 +6,9 @@ import CarFields, {
   BLANK_DRAFT,
   type CarDraft,
 } from "@/components/CarFields";
+import CarPhoto from "@/components/CarPhoto";
 import CatalogueHint, { applyRelease } from "@/components/CatalogueHint";
 import {
-  CarIcon,
   CheckIcon,
   FlameMark,
   GalleryIcon,
@@ -252,7 +252,10 @@ export default function ScanPage() {
       setBusy(true);
       try {
         const identification = await identify([imageDataUrl], upc);
-        const thumbnail = await makeThumbnail(imageDataUrl).catch(() => undefined);
+        // Crop the tile to the card the identifier found, not the shelf around it.
+        const thumbnail = await makeThumbnail(imageDataUrl, 320, identification.cardBox).catch(
+          () => undefined,
+        );
 
         // The card may already be in the garage under a barcode that was
         // never linked — most of a collection logged before barcode links
@@ -627,6 +630,7 @@ export default function ScanPage() {
         upc,
         confidence,
         wanted: true,
+        photoSource: thumbnail ? "scan" : undefined,
         source: upc ? "barcode" : "photo",
         addedAt: now,
         updatedAt: now,
@@ -674,6 +678,7 @@ export default function ScanPage() {
         toyNumber: existing.toyNumber ?? draft.toyNumber,
         color: existing.color ?? draft.color,
         thumbnail: existing.thumbnail ?? thumbnail,
+        photoSource: existing.thumbnail ? existing.photoSource : thumbnail ? "scan" : undefined,
         upc: existing.upc ?? upc,
       };
       try {
@@ -719,6 +724,7 @@ export default function ScanPage() {
       thumbnail,
       upc,
       confidence,
+      photoSource: thumbnail ? "scan" : undefined,
       source:
         upc ? "barcode"
         : thumbnail ? "photo"
@@ -976,13 +982,7 @@ export default function ScanPage() {
                     );
                   }}
                 >
-                  {car.thumbnail ?
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img className="car-thumb" src={car.thumbnail} alt="" />
-                  : <div className="car-thumb is-empty">
-                      <CarIcon />
-                    </div>
-                  }
+                  <CarPhoto car={car} />
                   <div>
                     <div className="car-name">{car.name}</div>
                     <div className="car-meta">{carSubtitle(car)}</div>
@@ -1028,9 +1028,10 @@ export default function ScanPage() {
                   style={{ textAlign: "left", width: "100%" }}
                   onClick={() => void pickCandidate(candidates, item)}
                 >
-                  <div className="car-thumb is-empty">
-                    <CarIcon />
-                  </div>
+                  <CarPhoto
+                    car={{ name: item.name, toyNumber: item.toyNumber, year: item.year }}
+                    release={item.release}
+                  />
                   <div style={{ minWidth: 0 }}>
                     <div className="car-name">{item.release?.name ?? item.name}</div>
                     <div className="car-meta">

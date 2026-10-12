@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CarIcon } from "@/components/icons";
+import CarPhoto from "@/components/CarPhoto";
 import type { Car } from "@/lib/types";
 
 export function carSubtitle(car: Car): string {
@@ -24,14 +24,7 @@ export default function CarRow({ car }: { car: Car }) {
 
   return (
     <Link href={`/car/${car.id}`} className={`car${huntClass}${wantedClass}`}>
-      {car.thumbnail ?
-        // Local data URLs from IndexedDB; next/image would add no value here.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img className="car-thumb" src={car.thumbnail} alt="" />
-      : <div className="car-thumb is-empty" aria-hidden="true">
-          <CarIcon />
-        </div>
-      }
+      <CarPhoto car={car} />
       <div>
         <div className="car-name">
           {car.name}

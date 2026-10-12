@@ -48,7 +48,8 @@ Rules for the fields you return:
 - "color" is a short plain description of the car body, e.g. "metallic blue", "matte black with orange flames".
 - "confidence" is 0 to 1, reflecting how sure you are of the name specifically.
 - "notes" is for anything a collector would want flagged: damaged card, error variant, non-Hot-Wheels brand such as Matchbox or Johnny Lightning, multi-pack. Otherwise empty.
-- Set "isHotWheels" false if the photo is not a die-cast car at all.`;
+- Set "isHotWheels" false if the photo is not a die-cast car at all.
+- "cardBox" is where the blister card (or the loose car, if there is no card) sits in the photo: x and y are the top-left corner and w and h the size, all as fractions of the image from 0 to 1. Be generous — include the whole card — and use the full frame (0, 0, 1, 1) if the card fills the picture or you cannot tell.`;
 
 const SCHEMA = {
   type: "object",
@@ -73,6 +74,18 @@ const SCHEMA = {
     treasureHunt: { type: "string", enum: ["none", "th", "sth"] },
     confidence: { type: "number", description: "0 to 1 confidence in the name." },
     notes: { type: "string", description: "Anything notable, or empty." },
+    cardBox: {
+      type: "object",
+      description: "Bounding box of the card or car in the photo, as fractions of the image.",
+      properties: {
+        x: { type: "number" },
+        y: { type: "number" },
+        w: { type: "number" },
+        h: { type: "number" },
+      },
+      required: ["x", "y", "w", "h"],
+      additionalProperties: false,
+    },
   },
   required: [
     "isHotWheels",
@@ -86,6 +99,7 @@ const SCHEMA = {
     "treasureHunt",
     "confidence",
     "notes",
+    "cardBox",
   ],
   additionalProperties: false,
 } as const;
@@ -310,6 +324,14 @@ function coerce(text: string): Identification | null {
 
   const confidence = typeof raw.confidence === "number" ? raw.confidence : 0;
 
+  const box = raw.cardBox as Record<string, unknown> | undefined;
+  const frac = (key: string) => (box && typeof box[key] === "number" ? (box[key] as number) : NaN);
+  const [bx, by, bw, bh] = ["x", "y", "w", "h"].map(frac);
+  const cardBox =
+    [bx, by, bw, bh].every((v) => Number.isFinite(v) && v >= 0 && v <= 1) && bw > 0 && bh > 0 ?
+      { x: bx, y: by, w: Math.min(bw, 1 - bx), h: Math.min(bh, 1 - by) }
+    : null;
+
   return {
     name: str("name") ?? "",
     series: str("series"),
@@ -319,6 +341,7 @@ function coerce(text: string): Identification | null {
     toyNumber: str("toyNumber")?.toUpperCase() ?? null,
     color: str("color"),
     treasureHunt: hunt,
+    cardBox,
     isHotWheels: raw.isHotWheels !== false,
     confidence: Math.min(1, Math.max(0, confidence)),
     notes: str("notes"),

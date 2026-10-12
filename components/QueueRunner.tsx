@@ -32,9 +32,11 @@ export default function QueueRunner() {
           await updateQueueItem({ ...item, status: "working" });
           try {
             const identification = await identify([item.imageDataUrl], item.upc);
-            const thumbnail = await makeThumbnail(item.imageDataUrl).catch(
-              () => undefined,
-            );
+            const thumbnail = await makeThumbnail(
+              item.imageDataUrl,
+              320,
+              identification.cardBox,
+            ).catch(() => undefined);
             await commitIdentification(identification, {
               upc: item.upc,
               thumbnail,

@@ -54,6 +54,7 @@ export function identificationToCar(
     upc: extras.upc,
     quantity: 1,
     thumbnail: extras.thumbnail,
+    photoSource: extras.thumbnail ? "scan" : undefined,
     notes: identification.notes ?? undefined,
     confidence: identification.confidence,
     source: extras.source,

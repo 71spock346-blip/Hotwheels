@@ -42,6 +42,16 @@ Treasure Hunt status and store exclusives. It is built from the
 offline use. Re-run the script now and then to pick up new releases; it takes
 about a minute.
 
+**Catalogue photos.** Each catalogue row also points at the Hot Wheels Wiki's
+photo of that release. A car matched by toy number shows that photo in the
+garage and on its page — a clean picture of the exact release instead of a
+blister shot taken at arm's length. The photos are fetched from the wiki when
+shown and credited there; they are never copied into the app or into backups,
+because they are fan uploads displayed under fair use, not CC-licensed data.
+A photo the collector takes on the car's page always wins, and a switch on
+Stats prefers scans over catalogue photos for anyone who wants that. Scan
+thumbnails themselves are now cropped to the card the identifier found.
+
 **The shared barcode database** is the part nobody can buy, because it does
 not exist anywhere: Mattel prints **one barcode per assortment**, not per car,
 so a barcode -> car table has to be built from what collectors actually find

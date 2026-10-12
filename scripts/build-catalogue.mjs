@@ -7,6 +7,7 @@
  *   node scripts/build-catalogue.mjs            # all years
  *   node scripts/build-catalogue.mjs 2024 2025  # just these
  */
+import { createHash } from "node:crypto";
 import { writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 
@@ -97,6 +98,20 @@ function parseTables(text) {
   return rows;
 }
 
+/**
+ * MediaWiki stores an upload at images/<a>/<ab>/<Name> where "ab" are the
+ * first hex digits of the MD5 of the file name (spaces as underscores, first
+ * letter upper-case). Computing it here saves a lookup per release and lets
+ * the app build any thumbnail size it likes from the one short path.
+ */
+function imagePath(rawTitle) {
+  let title = rawTitle.trim().replace(/\s+/g, "_").replace(/[\u200b\u200c\u200d\ufeff]/g, "");
+  if (!title) return undefined;
+  title = title[0].toUpperCase() + title.slice(1);
+  const hash = createHash("md5").update(title, "utf8").digest("hex");
+  return `${hash[0]}/${hash.slice(0, 2)}/${title}`;
+}
+
 function columnIndex(headers, ...names) {
   return headers.findIndex((header) => names.some((name) => header.replace(/[.\s]/g, "") === name));
 }
@@ -112,6 +127,10 @@ function toRelease(year, headers, cells) {
   const get = (at) => (at >= 0 && at < cells.length ? cells[at] : "");
   const name = plain(get(nameAt));
   if (!name) return null;
+
+  const photoAt = columnIndex(headers, "photo", "image", "picture");
+  const photoMatch = /\[\[(?:File|Image):([^\]|]+)/i.exec(photoAt >= 0 ? get(photoAt) : cells.join("\n"));
+  const photo = photoMatch ? imagePath(photoMatch[1]) : undefined;
 
   const rawSeries = get(seriesAt);
   const seriesText = plain(rawSeries);
@@ -130,6 +149,7 @@ function toRelease(year, headers, cells) {
   const exclusive = /exclusive/i.test(seriesText) ? seriesParts.find((part) => /exclusive/i.test(part)) : undefined;
 
   const release = { t: toy || undefined, c: col || undefined, n: name, s: series || undefined, sn: /^\d+\/\d+$/.test(seriesNumber) ? seriesNumber : undefined, y: year };
+  if (photo) release.p = photo;
   if (th) release.th = th;
   if (exclusive) release.x = exclusive.replace(/\s*exclusive\s*/i, "").trim() || "store";
   return release;

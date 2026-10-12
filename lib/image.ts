@@ -50,23 +50,68 @@ export function captureFrame(
   return canvas.toDataURL("image/jpeg", 0.9);
 }
 
-/** Shrink an existing data URL — used to make grid thumbnails. */
-export function makeThumbnail(dataUrl: string, maxEdge = 320): Promise<string> {
+/** A region of an image, each value a fraction of the full width/height. */
+export interface Box {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/**
+ * Shrink an existing data URL — used to make grid thumbnails. With `crop`,
+ * only that region is kept, so a card photographed at arm's length becomes a
+ * tile of the card rather than of the shelf behind it.
+ */
+export function makeThumbnail(
+  dataUrl: string,
+  maxEdge = 320,
+  crop?: Box | null,
+): Promise<string> {
   return new Promise((resolve, reject) => {
     const image = new Image();
     image.onload = () => {
+      const region = cropRegion(image.width, image.height, crop);
       const canvas = document.createElement("canvas");
-      const scale = Math.min(1, maxEdge / Math.max(image.width, image.height));
-      canvas.width = Math.round(image.width * scale);
-      canvas.height = Math.round(image.height * scale);
+      const scale = Math.min(1, maxEdge / Math.max(region.w, region.h));
+      canvas.width = Math.max(1, Math.round(region.w * scale));
+      canvas.height = Math.max(1, Math.round(region.h * scale));
       const context = canvas.getContext("2d");
       if (!context) return reject(new Error("Could not get a 2D canvas context"));
-      context.drawImage(image, 0, 0, canvas.width, canvas.height);
-      resolve(canvas.toDataURL("image/jpeg", 0.7));
+      context.drawImage(
+        image,
+        region.x,
+        region.y,
+        region.w,
+        region.h,
+        0,
+        0,
+        canvas.width,
+        canvas.height,
+      );
+      resolve(canvas.toDataURL("image/jpeg", 0.72));
     };
     image.onerror = () => reject(new Error("Could not decode the captured image"));
     image.src = dataUrl;
   });
+}
+
+/** Pixel rectangle for a crop box, padded a little and clamped to the image. */
+function cropRegion(width: number, height: number, crop?: Box | null) {
+  if (!crop || !(crop.w > 0.05) || !(crop.h > 0.05)) {
+    return { x: 0, y: 0, w: width, h: height };
+  }
+  const pad = 0.03;
+  const x0 = Math.max(0, crop.x - pad);
+  const y0 = Math.max(0, crop.y - pad);
+  const x1 = Math.min(1, crop.x + crop.w + pad);
+  const y1 = Math.min(1, crop.y + crop.h + pad);
+  return {
+    x: Math.round(x0 * width),
+    y: Math.round(y0 * height),
+    w: Math.round((x1 - x0) * width),
+    h: Math.round((y1 - y0) * height),
+  };
 }
 
 /** Read a file the user picked from their camera roll into a sized data URL. */

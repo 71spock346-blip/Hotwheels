@@ -30,6 +30,11 @@ export interface Car {
   quantity: number;
   /** Small JPEG data URL kept for the collection grid. */
   thumbnail?: string;
+  /**
+   * Where the thumbnail came from. A photo the owner took on purpose always
+   * shows; a scan thumbnail gives way to the catalogue photo when there is one.
+   */
+  photoSource?: "scan" | "own";
   notes?: string;
   /** 0-1, how sure the identifier was. Absent for manual entries. */
   confidence?: number;
@@ -87,6 +92,8 @@ export interface Identification {
    * confident match; absent means it was not checked.
    */
   catalogue?: "toy" | "collector" | "name" | null;
+  /** Where the card (or loose car) sits in the photo, as fractions of the frame. */
+  cardBox?: { x: number; y: number; w: number; h: number } | null;
 }
 
 export const EMPTY_IDENTIFICATION: Identification = {
@@ -101,4 +108,5 @@ export const EMPTY_IDENTIFICATION: Identification = {
   isHotWheels: false,
   confidence: 0,
   notes: null,
+  cardBox: null,
 };

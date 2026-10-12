@@ -23,6 +23,8 @@ export interface Release {
   treasureHunt?: Exclude<TreasureHunt, "none">;
   /** Store exclusive, e.g. "Walmart", "Dollar General". */
   exclusive?: string;
+  /** Wiki upload path ("9/95/HTB55.jpg"); see releasePhotoUrl. */
+  photo?: string;
 }
 
 interface RawRelease {
@@ -34,6 +36,7 @@ interface RawRelease {
   y: number;
   th?: "th" | "sth";
   x?: string;
+  p?: string;
 }
 
 interface RawCatalogue {
@@ -53,13 +56,20 @@ export interface Catalogue {
 }
 
 let loading: Promise<Catalogue> | null = null;
+let loaded: Catalogue | null = null;
+
+/** The catalogue if it has already arrived — lets list rows render without a flash. */
+export function catalogueNow(): Catalogue | null {
+  return loaded;
+}
 
 export function loadCatalogue(): Promise<Catalogue> {
   if (!loading) {
     loading = fetch("/catalogue.json")
       .then(async (response) => {
         if (!response.ok) throw new Error(`Catalogue unavailable (${response.status}).`);
-        return build((await response.json()) as RawCatalogue);
+        loaded = build((await response.json()) as RawCatalogue);
+        return loaded;
       })
       .catch((error: unknown) => {
         loading = null; // let a later call retry after a network blip
@@ -103,7 +113,37 @@ function fromRaw(raw: RawRelease): Release {
   if (raw.sn) release.seriesNumber = raw.sn;
   if (raw.th) release.treasureHunt = raw.th;
   if (raw.x) release.exclusive = raw.x;
+  if (raw.p) release.photo = raw.p;
   return release;
+}
+
+/**
+ * The release's photo on the Hot Wheels Wiki, scaled by their CDN. Fetched
+ * straight from the wiki and never stored: the pictures are fan uploads shown
+ * under fair use, so the app displays them with credit rather than copying
+ * them. `width` picks the thumbnail size; 0 asks for the original.
+ */
+export function releasePhotoUrl(release: Pick<Release, "photo">, width = 320): string | null {
+  if (!release.photo) return null;
+  const base = `https://static.wikia.nocookie.net/hotwheels/images/${release.photo}/revision/latest`;
+  return width > 0 ? `${base}/scale-to-width-down/${width}` : base;
+}
+
+/** The wiki page for a release photo, for the credit link. */
+export function releasePhotoPage(release: Pick<Release, "photo">): string | null {
+  if (!release.photo) return null;
+  const name = release.photo.split("/").slice(2).join("/");
+  return `https://hotwheels.fandom.com/wiki/File:${encodeURIComponent(name)}`;
+}
+
+/** The catalogue release a saved car corresponds to, by its toy number. */
+export function releaseForCar(
+  catalogue: Catalogue,
+  car: { toyNumber?: string | null; year?: number | null },
+): Release | undefined {
+  if (!car.toyNumber) return undefined;
+  const releases = lookupToyNumber(catalogue, car.toyNumber);
+  return releases.find((release) => release.year === car.year) ?? releases[0];
 }
 
 /* ------------------------------------------------------------- keys --- */

@@ -4,8 +4,11 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import CarFields, { draftFromCar, type CarDraft } from "@/components/CarFields";
+import CarPhoto, { choosePhoto, useCatalogue } from "@/components/CarPhoto";
 import CatalogueHint from "@/components/CatalogueHint";
 import { CameraIcon, ChevronLeftIcon, GalleryIcon } from "@/components/icons";
+import { releaseForCar, releasePhotoPage } from "@/lib/catalogue";
+import { prefersOwnPhotos } from "@/lib/prefs";
 import { Toast, useToast } from "@/components/Toast";
 import { announceChange } from "@/lib/commit";
 import { deleteCar, getCar, putCar } from "@/lib/db";
@@ -18,6 +21,7 @@ export default function CarPage() {
   const router = useRouter();
   const { toast, show } = useToast();
 
+  const catalogue = useCatalogue();
   const [car, setCar] = useState<Car | null>(null);
   const [draft, setDraft] = useState<CarDraft | null>(null);
   const [loading, setLoading] = useState(true);
@@ -77,7 +81,7 @@ export default function CarPage() {
       // 640px keeps enough detail to enjoy in the grid without bloating
       // IndexedDB — a full-resolution photo per car adds up fast.
       const thumbnail = await makeThumbnail(dataUrl, 640);
-      const updated = { ...car, thumbnail };
+      const updated: Car = { ...car, thumbnail, photoSource: "own" };
       await putCar(updated);
       setCar(updated);
       announceChange();
@@ -128,21 +132,53 @@ export default function CarPage() {
         </button>
       </header>
 
-      {car.thumbnail && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={car.thumbnail}
-          alt={car.name}
-          style={{
-            width: "100%",
-            maxHeight: 260,
-            objectFit: "contain",
-            borderRadius: "var(--radius)",
-            background: "var(--surface)",
-            marginBottom: 10,
-          }}
-        />
-      )}
+      {(() => {
+        const release = catalogue ? releaseForCar(catalogue, car) : undefined;
+        const chosen = choosePhoto(car, release, prefersOwnPhotos(), 640);
+        if (!chosen.src) return null;
+        const page = release ? releasePhotoPage(release) : null;
+        return (
+          <div className="hero">
+            <CarPhoto car={car} release={release} className="hero-photo" width={640} />
+            <div className="hero-caption">
+              {chosen.source === "catalogue" ?
+                <>
+                  Catalogue photo
+                  {page && (
+                    <>
+                      {" · "}
+                      <a href={page} target="_blank" rel="noreferrer">
+                        Hot Wheels Wiki
+                      </a>
+                    </>
+                  )}
+                </>
+              : chosen.source === "own" ?
+                <>
+                  Your photo
+                  {release?.photo && (
+                    <>
+                      {" · "}
+                      <button
+                        type="button"
+                        className="linkish"
+                        onClick={async () => {
+                          const updated: Car = { ...car, photoSource: "scan" };
+                          await putCar(updated);
+                          setCar(updated);
+                          announceChange();
+                        }}
+                      >
+                        use the catalogue photo instead
+                      </button>
+                    </>
+                  )}
+                </>
+              : "From your scan"}
+            </div>
+          </div>
+        );
+      })()}
 
       <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
         <label className="btn btn-block">

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CheckIcon, FlameMark } from "@/components/icons";
 import { Toast, useToast } from "@/components/Toast";
 import Upgrade from "@/components/Upgrade";
@@ -11,6 +11,7 @@ import { allUpcLinks, dequeue, updateQueueItem } from "@/lib/db";
 import { download, mergeBackup, parseBackupJson, toBackupJson, toCsv } from "@/lib/export";
 import { computeSeriesProgress } from "@/lib/series";
 import { computeStats } from "@/lib/stats";
+import { prefersOwnPhotos, setPrefersOwnPhotos } from "@/lib/prefs";
 import { useCollection } from "@/lib/useCollection";
 import {
   collectionValue,
@@ -24,6 +25,8 @@ export default function StatsPage() {
   const { toast, show } = useToast();
   const fileInput = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
+  const [ownPhotos, setOwnPhotos] = useState(false);
+  useEffect(() => setOwnPhotos(prefersOwnPhotos()), []);
 
   const owned = useMemo(() => cars.filter((car) => !car.wanted), [cars]);
   const stats = useMemo(() => computeStats(owned), [owned]);
@@ -263,6 +266,28 @@ export default function StatsPage() {
       )}
 
       <DriveBackup onMessage={show} onRestored={refresh} />
+
+      <h2 className="section-title">Photos</h2>
+      <div className="card">
+        <label className="switch">
+          <input
+            type="checkbox"
+            checked={ownPhotos}
+            onChange={(event) => {
+              setOwnPhotos(event.target.checked);
+              setPrefersOwnPhotos(event.target.checked);
+            }}
+          />
+          <span>
+            <b>Prefer my own scans</b>
+            <span className="muted small">
+              Off: cars matched to the catalogue show the Hot Wheels Wiki&rsquo;s
+              photo of that exact release. A photo you take yourself on a
+              car&rsquo;s page always shows either way.
+            </span>
+          </span>
+        </label>
+      </div>
 
       <h2 className="section-title">Your data</h2>
       <p className="muted small" style={{ marginTop: 0, lineHeight: 1.55 }}>
