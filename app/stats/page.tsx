@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CheckIcon, FlameMark } from "@/components/icons";
 import { Toast, useToast } from "@/components/Toast";
+import CarPhoto from "@/components/CarPhoto";
 import Upgrade from "@/components/Upgrade";
 import { announceChange } from "@/lib/commit";
 import DriveBackup from "@/components/DriveBackup";
@@ -11,6 +12,7 @@ import { allUpcLinks, dequeue, updateQueueItem } from "@/lib/db";
 import { download, mergeBackup, parseBackupJson, toBackupJson, toCsv } from "@/lib/export";
 import { computeSeriesProgress } from "@/lib/series";
 import { computeStats } from "@/lib/stats";
+import { fitDisplay, wholeUsd } from "@/lib/display";
 import { prefersOwnPhotos, setPrefersOwnPhotos } from "@/lib/prefs";
 import { useCollection } from "@/lib/useCollection";
 import {
@@ -37,6 +39,17 @@ export default function StatsPage() {
 
   const stamp = () => new Date().toISOString().slice(0, 10);
 
+  async function runEstimate(force: boolean) {
+    setEstimating({ done: 0, total: force ? cars.length : value.unvalued });
+    const result = await estimateMissing({ force, onProgress: setEstimating });
+    setEstimating(null);
+    await refresh();
+    if (result.error) show(result.error, "bad");
+    else if (force) show(`Re-estimated ${result.estimated} cars`, "good");
+    else if (result.estimated > 0) show(`Estimated ${result.estimated} cars`, "good");
+    else show("Everything already has a value", "good");
+  }
+
   async function onImport(file: File) {
     setImporting(true);
     try {
@@ -60,94 +73,83 @@ export default function StatsPage() {
         </div>
       </header>
 
-      <div className="stats">
-        <div className="stat">
-          <b>{stats.totalCars}</b>
-          <span>Cars</span>
-        </div>
-        <div className="stat">
-          <b>{stats.uniqueCastings}</b>
-          <span>Unique</span>
-        </div>
-        <div className="stat">
-          <b>{stats.duplicates}</b>
-          <span>Dupes</span>
-        </div>
-        <div className="stat is-gold">
-          <b>{stats.superTreasureHunts}</b>
-          <span>Super TH</span>
-        </div>
-      </div>
+      {cars.length > 0 ?
+        (() => {
+          const valued = value.low > 0 || value.high > 0;
+          const big = valued ? wholeUsd(value.low) : stats.totalCars.toLocaleString();
+          const unitValue = (car: (typeof owned)[number]) => car.value ?? car.estimate?.high ?? 0;
+          const top =
+            [...owned].sort((a, b) => unitValue(b) - unitValue(a)).find((car) => unitValue(car) > 0) ??
+            owned[0];
+          return (
+            <>
+              <section className="stage stage-side" aria-label="Collection value">
+                <div className="stage-back">
+                  <span className="label">
+                    {valued ?
+                      value.high > value.low ?
+                        `Collection value · up to ${wholeUsd(value.high)}`
+                      : "Collection value"
+                    : `${stats.totalCars === 1 ? "Car" : "Cars"} · value not estimated yet`}
+                  </span>
+                  <span className="display" style={{ fontSize: fitDisplay(big, 236) }}>
+                    {big}
+                  </span>
+                </div>
+                {top && (
+                  <Link href={`/car/${top.id}`} className="stage-subject">
+                    <CarPhoto car={top} className="stage-photo" width={640} />
+                    <span className="label stage-caption">
+                      {unitValue(top) > 0 ? "Most valuable" : "Latest"} · {top.name}
+                    </span>
+                  </Link>
+                )}
+                {value.unvalued > 0 && (
+                  <button
+                    type="button"
+                    className="fab"
+                    disabled={estimating !== null}
+                    onClick={() => void runEstimate(false)}
+                  >
+                    {estimating ?
+                      `Estimating ${estimating.done}/${estimating.total}…`
+                    : valued ?
+                      `Value ${value.unvalued} more`
+                    : "Estimate value"}
+                  </button>
+                )}
+              </section>
 
-      {cars.length > 0 && (
-        <>
-          <h2 className="section-title">Collection value</h2>
-          <div className="card" style={{ marginBottom: 14 }}>
-            {value.low > 0 || value.high > 0 ?
-              <b style={{ fontSize: 22 }}>
-                {formatUsd(value.low)}
-                {value.high > value.low && ` – ${formatUsd(value.high)}`}
-              </b>
-            : <b style={{ fontSize: 16 }}>Not estimated yet</b>}
+              <span className="label stage-facts">
+                {stats.uniqueCastings} unique · {stats.duplicates} dupes ·{" "}
+                {stats.superTreasureHunts} super TH
+              </span>
 
-            {value.unvalued > 0 && (
-              <p className="muted small" style={{ margin: "8px 0 0", lineHeight: 1.5 }}>
-                {value.unvalued} car{value.unvalued === 1 ? " has" : "s have"} no
-                value yet.
+              <p className="muted tiny" style={{ margin: "0 0 10px", lineHeight: 1.6 }}>
+                Ballpark from general market knowledge, not an appraisal — real
+                prices swing with condition and variant. Check recent eBay sold
+                listings before selling anything that looks valuable. Your own
+                value on a car always overrides the estimate.
               </p>
-            )}
-
-            <p className="muted tiny" style={{ margin: "8px 0 0", lineHeight: 1.5 }}>
-              Ballpark from general market knowledge, not an appraisal — real
-              prices swing with condition and variant. For anything that looks
-              valuable, check recent eBay sold listings before selling. Your own
-              value on a car always overrides the estimate.
-            </p>
-
-            <div className="sheet-actions" style={{ marginTop: 12 }}>
-              <button
-                type="button"
-                className="btn btn-primary"
-                disabled={estimating !== null || value.unvalued === 0}
-                onClick={async () => {
-                  setEstimating({ done: 0, total: value.unvalued });
-                  const result = await estimateMissing({
-                    onProgress: setEstimating,
-                  });
-                  setEstimating(null);
-                  await refresh();
-                  if (result.error) show(result.error, "bad");
-                  else if (result.estimated > 0)
-                    show(`Estimated ${result.estimated} cars`, "good");
-                  else show("Everything already has a value", "good");
-                }}
-              >
-                {estimating ?
-                  `Estimating ${estimating.done}/${estimating.total}…`
-                : "Estimate missing values"}
-              </button>
               <button
                 type="button"
                 className="btn btn-ghost"
-                disabled={estimating !== null || cars.length === 0}
-                onClick={async () => {
-                  setEstimating({ done: 0, total: cars.length });
-                  const result = await estimateMissing({
-                    force: true,
-                    onProgress: setEstimating,
-                  });
-                  setEstimating(null);
-                  await refresh();
-                  if (result.error) show(result.error, "bad");
-                  else show(`Re-estimated ${result.estimated} cars`, "good");
-                }}
+                style={{ paddingLeft: 0 }}
+                disabled={estimating !== null}
+                onClick={() => void runEstimate(true)}
               >
-                Re-estimate all
+                Re-estimate every car
               </button>
-            </div>
-          </div>
-        </>
-      )}
+            </>
+          );
+        })()
+      : <div className="empty">
+          <span className="display" aria-hidden="true">0</span>
+          <span className="label" style={{ display: "block", marginTop: 10 }}>
+            Cars to count yet
+          </span>
+        </div>
+      }
 
       <Upgrade onMessage={show} />
 
@@ -168,7 +170,7 @@ export default function StatsPage() {
                   alignItems: "baseline",
                 }}
               >
-                <b style={{ fontSize: 15 }}>
+                <b>
                   {series.name}
                   {series.year ? ` · ${series.year}` : ""}
                 </b>

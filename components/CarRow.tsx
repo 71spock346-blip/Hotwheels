@@ -1,5 +1,6 @@
 import Link from "next/link";
 import CarPhoto from "@/components/CarPhoto";
+import { ChevronRightIcon } from "@/components/icons";
 import type { Car } from "@/lib/types";
 
 export function carSubtitle(car: Car): string {
@@ -37,7 +38,8 @@ export default function CarRow({ car }: { car: Car }) {
         <div className="qty is-want">WANT</div>
       : car.quantity > 1 ?
         <div className="qty">×{car.quantity}</div>
-      : null}
+      : <span />}
+      <ChevronRightIcon className="chevron" />
     </Link>
   );
 }

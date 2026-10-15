@@ -1,10 +1,19 @@
 import type { Metadata, Viewport } from "next";
+import { Anton } from "next/font/google";
 import AutoBackup from "@/components/AutoBackup";
 import QueueRunner from "@/components/QueueRunner";
 import ServiceWorkerRegistrar from "@/components/ServiceWorkerRegistrar";
 import Splash from "@/components/Splash";
 import TabBar from "@/components/TabBar";
 import "./globals.css";
+
+/** The display face: condensed, built for numerals at enormous sizes. */
+const display = Anton({
+  weight: "400",
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-display",
+});
 
 export const metadata: Metadata = {
   title: "MONEYHOLE — Die-cast collection tracker",
@@ -22,7 +31,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0d0d10",
+  themeColor: "#0a0a0c",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -31,7 +40,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={display.variable}>
       <head>
         {/* Decide about the splash before first paint, so it never pops in
             over an already-drawn page. Installed app, once per launch. */}

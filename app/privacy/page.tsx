@@ -26,7 +26,9 @@ export default function PrivacyPage() {
         </Link>
       </header>
 
-      <h1 style={{ fontSize: 26, marginBottom: 6 }}>Privacy policy</h1>
+      <h1 className="display" style={{ fontSize: "clamp(72px, 22vw, 120px)", margin: "8px 0 14px" }}>
+        Privacy
+      </h1>
       <p className="muted small" style={{ marginTop: 0 }}>
         Last updated {UPDATED}
       </p>

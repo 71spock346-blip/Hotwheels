@@ -1,24 +1,31 @@
 :root {
-  /* The showroom palette, lifted from the icon: black lacquer, gold trim,
-     racing red, chrome yellow. One deliberate look — everything painted
-     explicitly, no light variant. */
-  --bg: #0d0d10;
-  --surface: #17171c;
-  --surface-2: #1f1f26;
-  --border: #35353f;
-  --ink: #e2b74a;
+  /* Ink and paper, plus one signal.
+     Paper: near-black surfaces separated by hairlines, never by colour.
+     Ink:   off-white text, a muted grey, and gold — the brand ink, used only
+            for the one huge thing on a screen and for hunt badges.
+     Signal: racing red. It means "tap this" and nothing else: never a
+            decoration, never an error. If it is red, it does something. */
+  --bg: #0a0a0c;
+  --surface: #131317;
+  --surface-2: #1b1b21;
+  --border: #26262e;
+  --text: #f3efe6;
+  --muted: #8f897e;
   --gold: #f4c95d;
   --gold-deep: #b8892a;
-  --gold-glow: rgba(244, 201, 93, 0.35);
-  --text: #f4efe4;
-  --muted: #a79f90;
-  --accent: #d81f26;
-  --accent-dim: #9e151b;
-  --yellow: #ffcc00;
+  --gold-glow: rgba(244, 201, 93, 0.3);
+  --signal: #e11d26;
+  --signal-ink: #ff4d53;
+  --signal-glow: rgba(225, 29, 38, 0.45);
   --green: #2fd35a;
-  --danger: #ff4d55;
+  --warn: #ffb547;
   --radius: 14px;
   --tab-height: 68px;
+
+  /* Three sizes and nothing between them. */
+  --display: var(--font-display), "Impact", "Arial Narrow", sans-serif;
+  --text-size: 15px;
+  --label-size: 11px;
 
   color-scheme: dark;
 }
@@ -54,8 +61,8 @@ h2,
 h3 {
   margin: 0;
   font-weight: 800;
-  letter-spacing: -0.02em;
-  color: var(--gold);
+  font-size: var(--text-size);
+  color: var(--text);
 }
 
 button,
@@ -98,30 +105,28 @@ a {
 .wordmark {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 19px;
+  gap: 9px;
+  font-size: var(--label-size);
   font-weight: 800;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--gold);
+  color: var(--text);
 }
 
 .wordmark .flame {
-  width: 30px;
-  height: 30px;
+  width: 26px;
+  height: 26px;
   flex: none;
-  border-radius: 8px;
-  border: 1px solid var(--gold-deep);
+  border-radius: 7px;
 }
 
 /* -------------------------------------------------------------- pieces --- */
 
 .card {
   background: var(--surface);
-  border: 2px solid var(--gold-deep);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 14px;
-  box-shadow: 0 3px 0 #000;
+  padding: 16px;
 }
 
 .btn {
@@ -129,14 +134,14 @@ a {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 11px 16px;
-  border: 2px solid var(--gold-deep);
-  border-radius: 11px;
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
   background: var(--surface);
-  color: var(--gold);
+  color: var(--signal-ink);
   font-weight: 700;
-  font-size: 15px;
-  box-shadow: 0 2px 0 #000;
+  font-size: var(--text-size);
   transition:
     filter 0.12s ease,
     transform 0.06s ease;
@@ -150,7 +155,6 @@ a {
 
 .btn:active {
   transform: translateY(1px);
-  box-shadow: 0 1px 0 #000;
 }
 
 .btn:disabled {
@@ -159,23 +163,22 @@ a {
 }
 
 .btn-primary {
-  background: var(--accent);
-  border-color: var(--gold);
+  background: var(--signal);
+  border-color: var(--signal);
   color: #ffffff;
+  box-shadow: 0 6px 18px -6px var(--signal-glow);
 }
 
 .btn-ghost {
-  background: var(--surface-2);
-  border-color: var(--border);
-  color: var(--text);
-  box-shadow: none;
+  background: transparent;
+  border-color: transparent;
+  color: var(--signal-ink);
 }
 
 .btn-danger {
-  color: var(--danger);
-  border-color: #6b1c20;
-  background: #24101200;
-  box-shadow: none;
+  background: transparent;
+  border-color: var(--border);
+  color: var(--signal-ink);
 }
 
 .btn-block {
@@ -189,11 +192,11 @@ a {
 
 .field span {
   display: block;
-  margin-bottom: 5px;
-  font-size: 12px;
+  margin-bottom: 6px;
+  font-size: var(--label-size);
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.12em;
   color: var(--muted);
 }
 
@@ -202,16 +205,17 @@ a {
 .field textarea {
   width: 100%;
   padding: 11px 12px;
-  border: 2px solid var(--border);
+  border: 1px solid var(--border);
   border-radius: 10px;
-  background: #121216;
+  background: var(--bg);
+  font-size: var(--text-size);
   outline: none;
 }
 
 .field input:focus,
 .field select:focus,
 .field textarea:focus {
-  border-color: var(--gold);
+  border-color: var(--muted);
 }
 
 .row {
@@ -223,15 +227,15 @@ a {
 .search {
   width: 100%;
   padding: 12px 14px;
-  border: 2px solid var(--gold-deep);
-  border-radius: 11px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
   background: var(--surface);
+  font-size: var(--text-size);
   outline: none;
-  box-shadow: 0 2px 0 #000;
 }
 
 .search:focus {
-  border-color: var(--gold);
+  border-color: var(--muted);
 }
 
 .muted {
@@ -239,59 +243,11 @@ a {
 }
 
 .small {
-  font-size: 13px;
+  font-size: var(--text-size);
 }
 
 .tiny {
-  font-size: 11.5px;
-}
-
-/* --------------------------------------------------------------- stats --- */
-
-.stats {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.stat {
-  padding: 12px 10px;
-  border: 2px solid var(--gold-deep);
-  border-radius: 12px;
-  background: var(--surface);
-  box-shadow: 0 3px 0 #000;
-  text-align: center;
-}
-
-.stat b {
-  display: block;
-  font-size: 22px;
-  font-weight: 800;
-  line-height: 1.1;
-  color: var(--gold);
-}
-
-.stat span {
-  display: block;
-  margin-top: 3px;
-  font-size: 10.5px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--muted);
-}
-
-.stat.is-gold {
-  background: var(--yellow);
-  border-color: var(--gold);
-}
-
-.stat.is-gold b {
-  color: #1a1200;
-}
-
-.stat.is-gold span {
-  color: #5a4200;
+  font-size: var(--label-size);
 }
 
 /* ------------------------------------------------------------ car list --- */
@@ -299,56 +255,48 @@ a {
 .cars {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .car {
   position: relative;
   display: grid;
-  grid-template-columns: 62px 1fr auto;
+  grid-template-columns: 62px 1fr auto auto;
   gap: 12px;
   align-items: center;
-  padding: 10px;
-  padding-left: 16px;
-  overflow: hidden;
+  padding: 10px 12px 10px 10px;
   background: var(--surface);
-  border: 2px solid var(--gold-deep);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: 0 3px 0 #000;
 }
 
 .car::before {
-  content: "";
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 6px;
-  background: var(--accent);
+  content: none;
 }
 
 .car.is-th::before {
-  background: var(--yellow);
+  content: none;
 }
 
 .car.is-sth::before {
-  background: linear-gradient(180deg, var(--yellow), var(--accent), var(--gold));
+  content: none;
 }
 
 .car.is-wanted {
   border-style: dashed;
-  background: #131318;
+  background: transparent;
 }
 
 .car.is-wanted::before {
-  background: var(--gold);
+  content: none;
 }
 
 .car-thumb {
   width: 62px;
   height: 62px;
-  border-radius: 9px;
+  border-radius: 10px;
   object-fit: cover;
   background: var(--surface-2);
-  border: 1px solid var(--border);
 }
 
 .car-thumb.is-empty {
@@ -364,36 +312,35 @@ a {
 
 .car-name {
   font-weight: 750;
-  font-size: 15.5px;
+  font-size: var(--text-size);
   line-height: 1.25;
   color: var(--text);
 }
 
 .car-meta {
-  margin-top: 3px;
-  font-size: 12.5px;
+  margin-top: 4px;
+  font-size: var(--label-size);
+  letter-spacing: 0.02em;
   color: var(--muted);
-  line-height: 1.35;
+  line-height: 1.4;
 }
 
 .qty {
-  min-width: 34px;
-  padding: 5px 8px;
+  min-width: 30px;
+  padding: 4px 8px;
   border-radius: 999px;
-  background: var(--yellow);
-  border: 2px solid var(--gold-deep);
-  color: #1a1200;
+  background: var(--surface-2);
+  color: var(--text);
   text-align: center;
   font-weight: 800;
-  font-size: 13px;
+  font-size: var(--label-size);
 }
 
 .qty.is-want {
   background: transparent;
+  border: 1px solid var(--gold-deep);
   color: var(--gold);
-  border-color: var(--gold);
-  font-size: 10.5px;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.1em;
 }
 
 .badge {
@@ -401,43 +348,40 @@ a {
   margin-left: 6px;
   padding: 1px 6px;
   border-radius: 5px;
-  font-size: 10px;
+  font-size: var(--label-size);
   font-weight: 800;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   vertical-align: 1px;
-  border: 1px solid var(--gold-deep);
 }
 
 .badge-th {
-  background: var(--yellow);
-  color: #1a1200;
+  border: 1px solid var(--gold);
+  color: var(--gold);
 }
 
 .badge-sth {
-  background: var(--accent);
-  color: #ffffff;
+  background: linear-gradient(135deg, #fff1b8, var(--gold) 45%, var(--gold-deep));
+  color: #1a1200;
 }
 
 /* --------------------------------------------------------------- empty --- */
 
 .empty {
-  padding: 44px 20px;
-  text-align: center;
-  border: 2px dashed var(--gold-deep);
-  border-radius: var(--radius);
-  background: var(--surface);
+  position: relative;
+  padding: 8px 0 20px;
+  text-align: left;
 }
 
 .empty h2 {
-  margin-bottom: 8px;
-  font-size: 18px;
+  margin: 0 0 8px;
+  font-size: var(--text-size);
 }
 
 .empty p {
-  margin: 0 auto 18px;
+  margin: 0 0 20px;
   max-width: 34ch;
   color: var(--muted);
-  font-size: 14px;
+  font-size: var(--text-size);
   line-height: 1.5;
 }
 
@@ -448,11 +392,9 @@ a {
   aspect-ratio: 3 / 4;
   max-height: 58dvh;
   margin: 0 auto;
-  border: 2px solid var(--gold-deep);
-  border-radius: var(--radius);
+  border-radius: 20px;
   overflow: hidden;
   background: #000;
-  box-shadow: 0 3px 0 #000;
 }
 
 .viewfinder video {
@@ -472,7 +414,7 @@ a {
   position: absolute;
   width: 26px;
   height: 26px;
-  border: 3px solid var(--gold);
+  border: 3px solid rgba(255, 255, 255, 0.9);
   filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.8));
 }
 
@@ -487,8 +429,8 @@ a {
   right: 6%;
   top: 10%;
   height: 2px;
-  background: var(--accent);
-  box-shadow: 0 0 10px 1px rgba(216, 31, 38, 0.8);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 12px 1px rgba(255, 255, 255, 0.55);
   animation: sweep 2.4s ease-in-out infinite;
 }
 
@@ -528,13 +470,13 @@ a {
   max-width: 88%;
   padding: 7px 13px;
   border-radius: 999px;
-  background: rgba(13, 13, 16, 0.82);
-  border: 1px solid rgba(244, 201, 93, 0.35);
+  background: rgba(10, 10, 12, 0.82);
   backdrop-filter: blur(8px);
   text-align: center;
-  font-size: 12.5px;
-  font-weight: 650;
-  line-height: 1.35;
+  font-size: var(--label-size);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.4;
   color: var(--text);
   pointer-events: none;
 }
@@ -558,11 +500,9 @@ a {
   height: 80px;
   padding: 0;
   border-radius: 50%;
-  border: 3px solid var(--gold);
-  background: #0d0d10;
-  box-shadow:
-    0 4px 0 #000,
-    0 0 0 6px var(--gold-glow);
+  border: 3px solid var(--signal);
+  background: var(--bg);
+  box-shadow: 0 8px 28px -6px var(--signal-glow);
   display: grid;
   place-items: center;
   transition: transform 0.06s ease;
@@ -572,15 +512,12 @@ a {
   width: 62px;
   height: 62px;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #ff5c62, var(--accent) 55%, var(--accent-dim));
+  background: radial-gradient(circle at 35% 30%, #ff5a60, var(--signal) 60%);
   transition: transform 0.1s ease;
 }
 
 .shutter:active {
   transform: translateY(2px);
-  box-shadow:
-    0 2px 0 #000,
-    0 0 0 6px var(--gold-glow);
 }
 
 .shutter:active .shutter-core {
@@ -602,10 +539,9 @@ a {
   height: 54px;
   padding: 0;
   border-radius: 50%;
-  border: 2px solid var(--gold-deep);
+  border: 1px solid var(--border);
   background: var(--surface);
-  color: var(--gold);
-  box-shadow: 0 2px 0 #000;
+  color: var(--signal-ink);
   display: grid;
   place-items: center;
 }
@@ -616,8 +552,9 @@ a {
 }
 
 .side-action[aria-pressed="true"] {
-  background: var(--gold);
-  color: #0d0d10;
+  background: var(--signal);
+  border-color: var(--signal);
+  color: #ffffff;
 }
 
 /* Two-way switch for the scanning mode. */
@@ -626,7 +563,7 @@ a {
   grid-template-columns: 1fr 1fr;
   padding: 3px;
   border-radius: 12px;
-  background: #0d0d10;
+  background: var(--bg);
   border: 1px solid var(--border);
 }
 
@@ -637,13 +574,12 @@ a {
   background: none;
   color: var(--muted);
   font-weight: 700;
-  font-size: 14px;
+  font-size: var(--text-size);
 }
 
 .segmented button[aria-pressed="true"] {
   background: var(--surface-2);
-  color: var(--gold);
-  box-shadow: inset 0 0 0 1px var(--gold-deep);
+  color: var(--text);
 }
 
 /* ---------------------------------------------------------------- hero --- */
@@ -676,20 +612,22 @@ a {
 }
 
 .hero-caption {
-  margin-top: 6px;
+  margin-top: 10px;
   text-align: center;
-  font-size: 11.5px;
+  font-size: var(--label-size);
+  letter-spacing: 0.04em;
   color: var(--muted);
 }
 
 .hero-caption a,
 .linkish {
-  color: var(--gold);
-  text-decoration: underline;
+  color: var(--signal-ink);
+  text-decoration: none;
   background: none;
   border: 0;
   padding: 0;
   font: inherit;
+  font-weight: 700;
 }
 
 /* -------------------------------------------------------------- switch --- */
@@ -728,13 +666,13 @@ a {
 }
 
 .switch input:checked {
-  background: var(--gold-deep);
-  border-color: var(--gold);
+  background: var(--signal);
+  border-color: var(--signal);
 }
 
 .switch input:checked::after {
   transform: translateX(18px);
-  background: #0d0d10;
+  background: #ffffff;
 }
 
 .switch > span {
@@ -792,7 +730,7 @@ html[data-splash="1"] .splash {
 }
 
 .splash-name {
-  font-size: 15px;
+  font-size: var(--text-size);
   font-weight: 800;
   letter-spacing: 0.32em;
   text-transform: uppercase;
@@ -828,11 +766,11 @@ html[data-splash="1"] .splash {
   max-width: calc(100vw - 32px);
   padding: 11px 16px;
   border-radius: 999px;
-  background: #1f1f26;
+  background: var(--surface-2);
   color: var(--text);
-  border: 2px solid var(--gold-deep);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
-  font-size: 14px;
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+  font-size: var(--text-size);
   font-weight: 650;
 }
 
@@ -843,16 +781,24 @@ html[data-splash="1"] .splash {
   flex: none;
 }
 
+.toast.is-good .toast-icon {
+  color: var(--green);
+}
+
+.toast.is-bad .toast-icon {
+  color: var(--warn);
+}
+
 .toast-icon:empty {
   display: none;
 }
 
 .toast.is-good {
-  border-color: var(--green);
+  color: var(--text);
 }
 
 .toast.is-bad {
-  border-color: var(--danger);
+  color: var(--text);
 }
 
 /* ---------------------------------------------------------------- tabs --- */
@@ -866,9 +812,9 @@ html[data-splash="1"] .splash {
   display: flex;
   height: calc(var(--tab-height) + env(safe-area-inset-bottom));
   padding-bottom: env(safe-area-inset-bottom);
-  background: rgba(13, 13, 16, 0.95);
-  backdrop-filter: blur(12px);
-  border-top: 2px solid var(--gold-deep);
+  background: rgba(10, 10, 12, 0.94);
+  backdrop-filter: blur(14px);
+  border-top: 1px solid var(--border);
 }
 
 .tab {
@@ -879,9 +825,9 @@ html[data-splash="1"] .splash {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  font-size: 10.5px;
+  font-size: var(--label-size);
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--muted);
   background: none;
@@ -909,19 +855,17 @@ html[data-splash="1"] .splash {
 .tab::before {
   content: "";
   position: absolute;
-  top: -2px;
+  top: -1px;
   left: 50%;
   width: 0;
-  height: 3px;
+  height: 2px;
   transform: translateX(-50%);
-  border-radius: 0 0 3px 3px;
-  background: var(--gold);
-  box-shadow: 0 0 10px var(--gold-glow);
+  background: var(--text);
   transition: width 0.18s ease;
 }
 
 .tab.is-active {
-  color: var(--gold);
+  color: var(--text);
 }
 
 .tab.is-active::before {
@@ -929,20 +873,19 @@ html[data-splash="1"] .splash {
 }
 
 .tab.is-active .tab-icon {
-  background: rgba(244, 201, 93, 0.1);
-  transform: translateY(-1px);
+  background: var(--surface-2);
 }
 
 /* -------------------------------------------------------------- queue --- */
 
 .queue {
   margin-bottom: 14px;
-  padding: 11px 13px;
+  padding: 12px 14px;
   border-radius: 12px;
-  border: 2px solid var(--gold-deep);
-  background: #221c0e;
-  color: var(--gold);
-  font-size: 13.5px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--text-size);
   font-weight: 600;
   display: flex;
   align-items: center;
@@ -953,8 +896,8 @@ html[data-splash="1"] .splash {
   width: 15px;
   height: 15px;
   flex: none;
-  border: 2px solid #4a3d1c;
-  border-top-color: var(--gold);
+  border: 2px solid var(--border);
+  border-top-color: var(--text);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
@@ -983,15 +926,21 @@ html[data-splash="1"] .splash {
   max-width: 720px;
   max-height: 88dvh;
   overflow-y: auto;
-  padding: 18px 16px calc(24px + env(safe-area-inset-bottom));
-  border-radius: 18px 18px 0 0;
+  padding: 22px 16px calc(24px + env(safe-area-inset-bottom));
+  border-radius: 22px 22px 0 0;
   background: var(--surface);
-  border-top: 3px solid var(--gold);
+  border-top: 1px solid var(--border);
 }
 
 .sheet h2 {
-  margin-bottom: 4px;
-  font-size: 18px;
+  margin-bottom: 6px;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(40px, 12vw, 56px);
+  line-height: 0.92;
+  letter-spacing: 0.005em;
+  text-transform: uppercase;
+  color: var(--gold);
 }
 
 .sheet-actions {
@@ -1008,10 +957,10 @@ html[data-splash="1"] .splash {
   vertical-align: middle;
   padding: 2px 8px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: var(--label-size);
   font-weight: 750;
-  background: #1a1f18;
-  border: 1px solid var(--green);
+  letter-spacing: 0.04em;
+  border: 1px solid currentColor;
   color: var(--green);
 }
 
@@ -1021,18 +970,16 @@ html[data-splash="1"] .splash {
 }
 
 .confidence.is-low {
-  color: var(--yellow);
-  border-color: var(--gold-deep);
-  background: #221c0e;
+  color: var(--warn);
 }
 
 .section-title {
-  margin: 22px 0 10px;
-  font-size: 12px;
+  margin: 30px 0 12px;
+  font-size: var(--label-size);
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--gold);
+  letter-spacing: 0.16em;
+  color: var(--muted);
 }
 
 .bar {
@@ -1040,24 +987,24 @@ html[data-splash="1"] .splash {
   grid-template-columns: 1fr auto;
   gap: 10px;
   align-items: center;
-  padding: 7px 0;
-  font-size: 13.5px;
+  padding: 9px 0;
+  font-size: var(--text-size);
   border-bottom: 1px solid var(--border);
 }
 
 .bar-track {
   position: relative;
-  height: 7px;
-  margin-top: 5px;
+  height: 4px;
+  margin-top: 8px;
   border-radius: 4px;
-  background: #2a2a32;
+  background: var(--surface-2);
   overflow: hidden;
 }
 
 .bar-fill {
   position: absolute;
   inset: 0 auto 0 0;
-  background: linear-gradient(90deg, var(--gold-deep), var(--gold));
+  background: var(--gold);
   border-radius: 4px;
 }
 
@@ -1065,17 +1012,17 @@ html[data-splash="1"] .splash {
 
 .notice {
   margin: 8px 0 12px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  line-height: 1.45;
-  font-size: 13px;
-  border: 2px solid;
+  padding: 11px 13px;
+  border-radius: 12px;
+  line-height: 1.5;
+  font-size: var(--text-size);
+  border: 1px solid;
 }
 
 .notice-bad {
-  border-color: var(--accent);
-  background: #2a1113;
-  color: #ffc4c1;
+  border-color: rgba(255, 181, 71, 0.5);
+  background: rgba(255, 181, 71, 0.07);
+  color: var(--text);
 }
 
 .notice-good {
@@ -1088,4 +1035,227 @@ html[data-splash="1"] .splash {
   .stats {
     grid-template-columns: repeat(4, 1fr);
   }
+}
+
+/* ============================================================= system === */
+
+/* The one huge thing on a screen. Everything else is 15px or 11px. */
+.display {
+  display: block;
+  font-family: var(--display);
+  font-weight: 400;
+  line-height: 0.82;
+  letter-spacing: -0.005em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.label {
+  font-size: var(--label-size);
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Rows that open something carry the signal, small, at their end. */
+.chevron {
+  width: 18px;
+  height: 18px;
+  color: var(--signal-ink);
+}
+
+/* Filter chips: the chosen one is filled with the signal. */
+.chips {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.chip {
+  flex: none;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font-size: var(--text-size);
+  font-weight: 700;
+}
+
+.chip[aria-pressed="true"] {
+  background: var(--signal);
+  border-color: var(--signal);
+  color: #ffffff;
+}
+
+/* ----------------------------------------------------------- the stage --- */
+
+/* Three planes: big type at the back, the car in the middle, the action on
+   top — each overlapping the one beneath, so the screen has depth instead of
+   a stack of flat boxes. */
+.stage {
+  position: relative;
+  margin: 6px 0 22px;
+  isolation: isolate;
+}
+
+.stage-back {
+  position: relative;
+  z-index: 0;
+}
+
+.stage-back .display {
+  font-size: 200px;
+}
+
+.stage-back .label {
+  display: block;
+  margin-bottom: 12px;
+}
+
+.stage-subject {
+  position: relative;
+  z-index: 1;
+  display: block;
+}
+
+.stage-photo {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 18px;
+  background: var(--surface-2);
+  box-shadow:
+    0 30px 60px -18px rgba(0, 0, 0, 0.95),
+    0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.stage-photo.is-empty {
+  display: grid;
+  place-items: center;
+  color: #4d4d57;
+}
+
+.stage-photo.is-empty svg {
+  width: 30%;
+  height: 30%;
+}
+
+/* Garage and Stats: the photo sits to the right, over the number's tail. */
+/* Rises into the number's lower half, from the right. */
+.stage-side .stage-subject {
+  width: 60%;
+  margin: -118px 0 0 auto;
+  transform: rotate(-2.5deg);
+}
+
+.stage-side .stage-caption {
+  margin-top: 12px;
+  text-align: right;
+  transform: rotate(2.5deg);
+}
+
+.stage-caption {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* The action, on top of the photo's corner. */
+.fab {
+  position: absolute;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 0 22px 0 18px;
+  border-radius: 999px;
+  border: 0;
+  background: var(--signal);
+  color: #ffffff;
+  font-size: var(--text-size);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  box-shadow:
+    0 14px 30px -8px var(--signal-glow),
+    0 0 0 4px var(--bg);
+}
+
+.fab svg {
+  width: 20px;
+  height: 20px;
+}
+
+.fab:active {
+  transform: translateY(1px);
+}
+
+.stage-side .fab {
+  left: 0;
+  bottom: 44px;
+}
+
+/* Car page: the name at the back, the photo overlapping its lower lines. */
+.stage-car .stage-back .display {
+  font-size: inherit;
+  overflow-wrap: anywhere;
+}
+
+/* Covers the lower half of the name's last line, never the whole of it. */
+.stage-car .stage-subject {
+  margin-top: -0.3em;
+}
+
+.fab-round {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: var(--signal);
+  color: #ffffff;
+  box-shadow:
+    0 12px 26px -8px var(--signal-glow),
+    0 0 0 4px var(--bg);
+}
+
+.fab-round svg {
+  width: 23px;
+  height: 23px;
+}
+
+.fab-round.is-quiet {
+  background: var(--surface-2);
+  color: var(--signal-ink);
+  box-shadow: 0 0 0 4px var(--bg);
+}
+
+.stage-car .fab-round {
+  bottom: -22px;
+}
+
+.stage-car .fab-round:nth-of-type(1) {
+  right: 16px;
+}
+
+.stage-car .fab-round:nth-of-type(2) {
+  right: 80px;
+}
+
+.stage-facts {
+  display: block;
+  margin: -6px 0 20px;
+}
+
+.empty .display {
+  font-size: clamp(160px, 56vw, 260px);
+  opacity: 0.9;
 }

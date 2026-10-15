@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import CarPhoto from "@/components/CarPhoto";
 import CarRow from "@/components/CarRow";
-import { FlameMark } from "@/components/icons";
+import { FlameMark, ScanIcon } from "@/components/icons";
+import { fitDisplay } from "@/lib/display";
 import { useCollection } from "@/lib/useCollection";
 import { computeStats, searchCars } from "@/lib/stats";
 
@@ -17,6 +19,11 @@ export default function CollectionPage() {
   const owned = useMemo(() => cars.filter((car) => !car.wanted), [cars]);
   const wishlist = useMemo(() => cars.filter((car) => car.wanted), [cars]);
   const stats = useMemo(() => computeStats(owned), [owned]);
+  // The car on the stage: the newest one that has something to look at.
+  const latest = useMemo(
+    () => owned.find((car) => car.thumbnail || car.toyNumber) ?? owned[0],
+    [owned],
+  );
 
   const visible = useMemo(() => {
     let list = searchCars(filter === "wishlist" ? wishlist : owned, query);
@@ -35,11 +42,9 @@ export default function CollectionPage() {
       <header className="topbar">
         <div className="wordmark">
           <FlameMark className="flame" />
-          Garage
+          Moneyhole
         </div>
-        <Link href="/scan" className="btn btn-primary">
-          Scan
-        </Link>
+        <span className="label">Garage</span>
       </header>
 
       {working > 0 && (
@@ -58,24 +63,35 @@ export default function CollectionPage() {
 
       {cars.length > 0 && (
         <>
-          <div className="stats">
-            <div className="stat">
-              <b>{stats.totalCars}</b>
-              <span>Cars</span>
-            </div>
-            <div className="stat">
-              <b>{stats.uniqueCastings}</b>
-              <span>Unique</span>
-            </div>
-            <div className="stat">
-              <b>{stats.duplicates}</b>
-              <span>Dupes</span>
-            </div>
-            <div className="stat is-gold">
-              <b>{stats.treasureHunts + stats.superTreasureHunts}</b>
-              <span>Hunts</span>
-            </div>
-          </div>
+          {latest && (
+            <section className="stage stage-side" aria-label="Collection">
+              <div className="stage-back">
+                <span className="label">
+                  {stats.totalCars === 1 ? "Car" : "Cars"} in the garage
+                </span>
+                <span
+                  className="display"
+                  style={{ fontSize: fitDisplay(stats.totalCars.toLocaleString(), 236) }}
+                >
+                  {stats.totalCars.toLocaleString()}
+                </span>
+              </div>
+              <Link href={`/car/${latest.id}`} className="stage-subject">
+                <CarPhoto car={latest} className="stage-photo" width={640} />
+                <span className="label stage-caption">Latest · {latest.name}</span>
+              </Link>
+              <Link href="/scan" className="fab">
+                <ScanIcon />
+                Scan
+              </Link>
+            </section>
+          )}
+
+          <span className="label stage-facts">
+            {stats.uniqueCastings} unique · {stats.duplicates} dupes ·{" "}
+            {stats.treasureHunts + stats.superTreasureHunts}{" "}
+            {stats.treasureHunts + stats.superTreasureHunts === 1 ? "hunt" : "hunts"}
+          </span>
 
           <input
             className="search"
@@ -86,7 +102,7 @@ export default function CollectionPage() {
             autoComplete="off"
           />
 
-          <div style={{ display: "flex", gap: 8, margin: "12px 0 14px" }}>
+          <div className="chips">
             {(
               [
                 ["all", "All"],
@@ -98,8 +114,8 @@ export default function CollectionPage() {
               <button
                 key={value}
                 type="button"
-                className={`btn${filter === value ? " btn-primary" : " btn-ghost"}`}
-                style={{ padding: "7px 13px", fontSize: 13.5 }}
+                className="chip"
+                aria-pressed={filter === value}
                 onClick={() => setFilter(value)}
               >
                 {label}
@@ -113,13 +129,17 @@ export default function CollectionPage() {
         <p className="muted small">Opening the garage…</p>
       : cars.length === 0 ?
         <div className="empty">
-          <h2>Nothing logged yet</h2>
+          <span className="display" aria-hidden="true">0</span>
+          <span className="label" style={{ display: "block", margin: "10px 0 18px" }}>
+            Cars in the garage
+          </span>
           <p>
             Point the camera at a card. If it has a barcode you have scanned before
             it lands instantly; otherwise a photo of the card is enough to identify
             it.
           </p>
           <Link href="/scan" className="btn btn-primary">
+            <ScanIcon />
             Scan your first car
           </Link>
         </div>

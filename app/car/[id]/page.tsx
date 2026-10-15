@@ -135,12 +135,43 @@ export default function CarPage() {
       {(() => {
         const release = catalogue ? releaseForCar(catalogue, car) : undefined;
         const chosen = choosePhoto(car, release, prefersOwnPhotos(), 640);
-        if (!chosen.src) return null;
         const page = release ? releasePhotoPage(release) : null;
+        // Size the name so its longest word fills the width without breaking.
+        const longest = Math.max(
+          4,
+          ...car.name.split(/\s+/).map((word) => word.length),
+        );
+        const nameSize = `min(132px, calc(min(100vw - 32px, 688px) / ${(longest * 0.5).toFixed(2)}))`;
+        const photoInput = (capture: boolean) => (
+          <input
+            type="file"
+            accept="image/*"
+            capture={capture ? "environment" : undefined}
+            hidden
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) void replacePhoto(file);
+              event.target.value = "";
+            }}
+          />
+        );
         return (
-          <div className="hero">
-            <CarPhoto car={car} release={release} className="hero-photo" width={640} />
-            <div className="hero-caption">
+          <section className="stage stage-car" style={{ fontSize: nameSize }}>
+            <div className="stage-back">
+              <h1 className="display">{car.name}</h1>
+            </div>
+            <div className="stage-subject">
+              <CarPhoto car={car} release={release} className="stage-photo" width={640} />
+              <label className="fab-round" aria-label={car.thumbnail ? "Retake photo" : "Take a photo"}>
+                <CameraIcon />
+                {photoInput(true)}
+              </label>
+              <label className="fab-round is-quiet" aria-label="Choose a photo from the library">
+                <GalleryIcon />
+                {photoInput(false)}
+              </label>
+            </div>
+            <div className="hero-caption" style={{ marginTop: 30, textAlign: "left" }}>
               {chosen.source === "catalogue" ?
                 <>
                   Catalogue photo
@@ -169,48 +200,18 @@ export default function CarPage() {
                           announceChange();
                         }}
                       >
-                        use the catalogue photo instead
+                        Use the catalogue photo
                       </button>
                     </>
                   )}
                 </>
-              : "From your scan"}
+              : chosen.source === "scan" ?
+                "From your scan · tap the camera for a better one"
+              : "No photo yet · tap the camera"}
             </div>
-          </div>
+          </section>
         );
       })()}
-
-      <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
-        <label className="btn btn-block">
-          <CameraIcon />
-          {car.thumbnail ? "Retake photo" : "Take a photo"}
-          <input
-            type="file"
-            accept="image/*"
-            capture="environment"
-            hidden
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) void replacePhoto(file);
-              event.target.value = "";
-            }}
-          />
-        </label>
-        <label className="btn btn-block btn-ghost">
-          <GalleryIcon />
-          From library
-          <input
-            type="file"
-            accept="image/*"
-            hidden
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) void replacePhoto(file);
-              event.target.value = "";
-            }}
-          />
-        </label>
-      </div>
 
       <CatalogueHint draft={draft} onApply={setDraft} />
       <CarFields draft={draft} onChange={setDraft} />

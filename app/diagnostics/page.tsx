@@ -183,7 +183,9 @@ export default function DiagnosticsPage() {
         </button>
       </header>
 
-      <h1 style={{ fontSize: 24, marginBottom: 6 }}>Diagnostics</h1>
+      <h1 className="display" style={{ fontSize: "clamp(72px, 22vw, 120px)", margin: "8px 0 14px" }}>
+        Diagnostics
+      </h1>
       <p className="muted small" style={{ marginTop: 0, lineHeight: 1.5 }}>
         Runs each part of the app for real — camera, barcode reader, storage and
         server — and reports what happened.

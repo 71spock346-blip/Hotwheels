@@ -155,6 +155,14 @@ export function AlertIcon(props: IconProps) {
   );
 }
 
+export function ChevronRightIcon(props: IconProps) {
+  return (
+    <Icon strokeWidth="2.2" {...props}>
+      <path d="m9.5 5.5 6.5 6.5-6.5 6.5" />
+    </Icon>
+  );
+}
+
 export function ChevronLeftIcon(props: IconProps) {
   return (
     <Icon strokeWidth="2.2" {...props}>
