@@ -129,3 +129,48 @@ export function download(filename: string, contents: string, mimeType: string): 
   anchor.click();
   URL.revokeObjectURL(url);
 }
+
+export type ShareOutcome = "shared" | "cancelled" | "unsupported";
+
+/**
+ * The file versions to offer the share sheet, best first. iPhone takes a
+ * .json file; Chrome on Android only shares an allowlist of types that
+ * leaves out JSON, so it gets the same contents as a .txt file. Restore
+ * reads either.
+ */
+function shareableFiles(basename: string, contents: string): File[] {
+  return [
+    new File([contents], `${basename}.json`, { type: "application/json" }),
+    new File([contents], `${basename}.txt`, { type: "text/plain" }),
+  ];
+}
+
+/** True when this browser can hand a backup file to the system share sheet. */
+export function canShareFiles(): boolean {
+  if (typeof navigator === "undefined" || !navigator.share || !navigator.canShare) return false;
+  return shareableFiles("probe", "{}").some((file) => navigator.canShare({ files: [file] }));
+}
+
+/**
+ * Open the system share sheet with a backup file, so the user can pick
+ * Save to Files / iCloud on iPhone, or Drive, Samsung Cloud, Dropbox and
+ * so on on Android. Must be called straight from a tap: browsers refuse a
+ * share that starts after an await.
+ */
+export async function shareFile(basename: string, contents: string): Promise<ShareOutcome> {
+  if (typeof navigator === "undefined" || !navigator.share || !navigator.canShare) {
+    return "unsupported";
+  }
+  const file = shareableFiles(basename, contents).find((candidate) =>
+    navigator.canShare({ files: [candidate] }),
+  );
+  if (!file) return "unsupported";
+  try {
+    await navigator.share({ files: [file], title: file.name });
+    return "shared";
+  } catch (error) {
+    // Closing the sheet without picking anything is not an error.
+    if (error instanceof DOMException && error.name === "AbortError") return "cancelled";
+    return "unsupported";
+  }
+}

@@ -9,7 +9,16 @@ import Upgrade from "@/components/Upgrade";
 import { announceChange } from "@/lib/commit";
 import DriveBackup from "@/components/DriveBackup";
 import { allUpcLinks, dequeue, updateQueueItem } from "@/lib/db";
-import { download, mergeBackup, parseBackupJson, toBackupJson, toCsv } from "@/lib/export";
+import {
+  canShareFiles,
+  download,
+  mergeBackup,
+  parseBackupJson,
+  shareFile,
+  toBackupJson,
+  toCsv,
+} from "@/lib/export";
+import type { UpcLink } from "@/lib/types";
 import { computeSeriesProgress } from "@/lib/series";
 import { computeStats } from "@/lib/stats";
 import { fitDisplay, wholeUsd } from "@/lib/display";
@@ -29,6 +38,14 @@ export default function StatsPage() {
   const [importing, setImporting] = useState(false);
   const [ownPhotos, setOwnPhotos] = useState(false);
   useEffect(() => setOwnPhotos(prefersOwnPhotos()), []);
+  const [shareable, setShareable] = useState(false);
+  useEffect(() => setShareable(canShareFiles()), []);
+  // Read ahead so a tap on Share backup opens the sheet at once: browsers
+  // refuse a share that only starts after waiting on the database.
+  const [upcLinks, setUpcLinks] = useState<UpcLink[]>([]);
+  useEffect(() => {
+    void allUpcLinks().then(setUpcLinks);
+  }, [cars]);
 
   const owned = useMemo(() => cars.filter((car) => !car.wanted), [cars]);
   const stats = useMemo(() => computeStats(owned), [owned]);
@@ -48,6 +65,17 @@ export default function StatsPage() {
     else if (force) show(`Re-estimated ${result.estimated} cars`, "good");
     else if (result.estimated > 0) show(`Estimated ${result.estimated} cars`, "good");
     else show("Everything already has a value", "good");
+  }
+
+  async function onShareBackup() {
+    const basename = `moneyhole-backup-${stamp()}`;
+    const contents = toBackupJson(cars, upcLinks);
+    const outcome = await shareFile(basename, contents);
+    if (outcome === "shared") show("Backup saved", "good");
+    else if (outcome === "unsupported") {
+      download(`${basename}.json`, contents, "application/json");
+      show("Sharing is not available here, so the backup was downloaded instead");
+    }
   }
 
   async function onImport(file: File) {
@@ -299,6 +327,17 @@ export default function StatsPage() {
       </p>
 
       <div style={{ display: "grid", gap: 10, marginTop: 14 }}>
+        {shareable && (
+          <button
+            type="button"
+            className="btn btn-primary btn-block"
+            disabled={!cars.length}
+            onClick={() => void onShareBackup()}
+          >
+            Share backup (Files, iCloud, Drive, Dropbox)
+          </button>
+        )}
+
         <button
           type="button"
           className="btn btn-block"
@@ -336,7 +375,7 @@ export default function StatsPage() {
         <input
           ref={fileInput}
           type="file"
-          accept="application/json,.json"
+          accept="application/json,.json,text/plain,.txt"
           hidden
           onChange={(event) => {
             const file = event.target.files?.[0];

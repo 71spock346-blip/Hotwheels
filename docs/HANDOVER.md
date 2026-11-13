@@ -116,8 +116,12 @@ Don't reopen these without a reason; each was discussed with the owner.
   file. Android web apps cannot write to a phone folder on their own
   schedule; that's a platform limit.
 - **iPhone users** can install it from Safari. Drive backup is optional for
-  them; the planned iPhone backup path is the share sheet → Save to Files →
-  iCloud Drive (not built yet, see section 6).
+  them; their backup path is **Share backup** on Stats → Save to Files →
+  iCloud Drive. The button uses the system share sheet (`shareFile` in
+  `lib/export.ts`) and only shows where the browser can share files.
+  Chrome on Android won't share `.json`, so there it shares the same
+  contents as a `.txt` file; restore accepts both. If a share fails for
+  any reason other than the user closing the sheet, it downloads instead.
 - **Identification uses Claude** (`claude-opus-5` by default, effort
   `medium`) with a structured-output schema. It is told never to invent a
   toy number; an empty field beats a confident wrong one, because the toy
@@ -197,8 +201,6 @@ cheap; never put emoji in the interface.
 
 **Proposed and agreed in principle, not built yet:**
 
-- **Share backup** through the system share sheet (Save to Files / iCloud
-  on iPhone; Samsung Cloud, Dropbox and so on on Android).
 - **Persistent storage** (`navigator.storage.persist()`) so Android does
   not evict the collection, with a line on Stats showing whether it was
   granted, and a reminder when there has been no backup for a while.
