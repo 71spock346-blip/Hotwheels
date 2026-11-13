@@ -1,5 +1,6 @@
 import "server-only";
 import { claim, decrement, getNumber, increment, storeConfigured } from "./store";
+import { billingConfigured } from "./play";
 
 /**
  * Metering: a small free allowance, then credits bought in packs.
@@ -18,8 +19,12 @@ import { claim, decrement, getNumber, increment, storeConfigured } from "./store
 /** Free identifications per install before any purchase. */
 export const FREE_SCAN_LIMIT = Number(process.env.FREE_SCAN_LIMIT ?? "10");
 
-/** Metering only applies once there is somewhere durable to count. */
-export const meteringEnabled = storeConfigured;
+/**
+ * Metering only applies once there is somewhere durable to count AND a way to
+ * buy more. Adding Redis for the shared barcode database alone must not put a
+ * paywall in front of the owner when no credit pack can be bought yet.
+ */
+export const meteringEnabled = storeConfigured && billingConfigured;
 
 export interface CreditPack {
   id: string;

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { FREE_SCAN_LIMIT, meteringEnabled } from "@/lib/server/entitlements";
 import { billingConfigured } from "@/lib/server/play";
+import { storeConfigured } from "@/lib/server/store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,6 +26,7 @@ export function GET() {
       freeScanLimit: FREE_SCAN_LIMIT,
     },
     billing: { configured: billingConfigured },
+    barcodeDatabase: { enabled: storeConfigured },
     deployment: {
       // Vercel sets these; absent when running locally.
       id: process.env.VERCEL_DEPLOYMENT_ID ?? null,
