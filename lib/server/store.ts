@@ -9,8 +9,10 @@ import "server-only";
  * and go, making the fallback useless for real metering.
  */
 
-const REST_URL = process.env.UPSTASH_REDIS_REST_URL;
-const REST_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+// Upstash's own names first, then the KV_* names that Vercel's Storage tab
+// gives a Redis store when it is connected to a project.
+const REST_URL = process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL;
+const REST_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN;
 
 export const storeConfigured = Boolean(REST_URL && REST_TOKEN);
 

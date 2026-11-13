@@ -59,8 +59,11 @@ behind each barcode. Every time a user confirms a car against a barcode, that
 vote is counted (anonymously: barcode, toy number, name — nothing about the
 user) and the next person to scan the same barcode is offered the cars others
 found. It needs the same Upstash Redis as the free-tier metering, so it is
-live as soon as `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` are set
-(Vercel → Storage → Upstash, one click). Until then the app quietly skips it.
+live as soon as a Redis store is connected (Vercel → Storage → Upstash, one
+click). The app reads either `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`
+or the `KV_REST_API_URL` / `KV_REST_API_TOKEN` names Vercel gives the store.
+Until then the app quietly skips it. Redis on its own does not switch on the
+free-tier limit; that also needs Play billing configured (below).
 
 ### Two scanning modes
 
@@ -244,11 +247,11 @@ poor fit here, since it gets cancelled as soon as the burst is over.
 
 **This is off until you configure it**, which is deliberate — a private
 deployment for one person should never see a paywall. Metering switches on only
-once a Redis store is configured.
+once both a Redis store and Play billing (step 3) are configured.
 
 1. **Add a store.** Vercel dashboard → **Storage** → Redis (Upstash) from the
-   Marketplace. It sets `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`
-   for you. `FREE_SCAN_LIMIT` defaults to 10.
+   Marketplace. It sets `KV_REST_API_URL` and `KV_REST_API_TOKEN` (or the
+   `UPSTASH_REDIS_REST_*` names) for you. `FREE_SCAN_LIMIT` defaults to 10.
 2. **Create the products.** Play Console → **Monetise → In-app products** →
    create one **consumable** product per pack. Then list them in
    `PLAY_CREDIT_PACKS`, which maps each product id to what it grants:
