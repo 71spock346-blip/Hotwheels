@@ -4,6 +4,7 @@ import AutoBackup from "@/components/AutoBackup";
 import QueueRunner from "@/components/QueueRunner";
 import ServiceWorkerRegistrar from "@/components/ServiceWorkerRegistrar";
 import Splash from "@/components/Splash";
+import StorageGuard from "@/components/StorageGuard";
 import TabBar from "@/components/TabBar";
 import "./globals.css";
 
@@ -55,6 +56,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {children}
         <QueueRunner />
         <AutoBackup />
+        <StorageGuard />
         <ServiceWorkerRegistrar />
         <TabBar />
       </body>

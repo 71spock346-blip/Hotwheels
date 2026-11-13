@@ -42,6 +42,14 @@ feature; this file says where things stand and why they are the way they are.
   wishlist), duplicates counted as ×N, wishlist (scanning a wanted car
   moves it into the garage), series completion ("3/10 still hunting"),
   rough value estimates, CSV export, JSON backup and restore.
+- **Keeping the collection.** The app asks the browser for persistent
+  storage (`navigator.storage.persist()`, in `components/StorageGuard.tsx`)
+  at launch, after install and now and then while cars are added; Chrome
+  answers silently, usually yes once the app is on the home screen. Stats →
+  Your data shows whether it was granted and when the last backup was
+  (Drive, a shared file or a downloaded file). When cars have changed and a week has passed
+  without a backup, an amber reminder shows on the Garage and on Stats.
+  Logic in `lib/safety.ts`.
 - **Offline.** The collection lives on the phone (IndexedDB). Photos taken
   offline queue and are identified when the connection comes back.
 - **Design.** Black and gold showroom look, MONEYHOLE icon and splash,
@@ -198,12 +206,6 @@ cheap; never put emoji in the interface.
 ---
 
 ## 6. Backlog and known issues
-
-**Proposed and agreed in principle, not built yet:**
-
-- **Persistent storage** (`navigator.storage.persist()`) so Android does
-  not evict the collection, with a line on Stats showing whether it was
-  granted, and a reminder when there has been no backup for a while.
 
 **Ideas for later:**
 

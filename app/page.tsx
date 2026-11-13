@@ -7,6 +7,7 @@ import CarRow from "@/components/CarRow";
 import { FlameMark, ScanIcon } from "@/components/icons";
 import { fitDisplay } from "@/lib/display";
 import { useCollection } from "@/lib/useCollection";
+import { useCollectionSafety } from "@/lib/safety";
 import { computeStats, searchCars } from "@/lib/stats";
 
 type Filter = "all" | "dupes" | "hunts" | "wishlist";
@@ -31,6 +32,8 @@ export default function CollectionPage() {
     if (filter === "hunts") list = list.filter((car) => car.treasureHunt !== "none");
     return list;
   }, [owned, wishlist, query, filter]);
+
+  const { reminder } = useCollectionSafety(cars);
 
   const working = queue.filter((item) => item.status !== "failed").length;
   const failed = queue.filter(
@@ -59,6 +62,17 @@ export default function CollectionPage() {
           {failed} photo{failed === 1 ? "" : "s"} could not be identified. Tap to
           review.
         </Link>
+      )}
+
+      {reminder && (
+        <p className="notice notice-bad" role="status">
+          {reminder.lastAt ?
+            `No backup in ${reminder.days} days, and cars have changed since.`
+          : "This collection has never been backed up."}{" "}
+          <Link href="/stats#your-data" style={{ color: "var(--signal-ink)", fontWeight: 700 }}>
+            Back it up
+          </Link>
+        </p>
       )}
 
       {cars.length > 0 && (
