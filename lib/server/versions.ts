@@ -115,20 +115,35 @@ export function parseVersions(casting: string, text: string): WikiVersion[] {
       : undefined;
 
     const toy = plain(get(toyAt)).split(/[·/,\s]/)[0].toUpperCase().replace(/[^A-Z0-9]/g, "");
+    // The Col # column holds the mainline number ("69/250" or "69"); the set
+    // position ("2/5", "#16") is written into the series cell after a dot.
     const colText = plain(get(colAt));
-    // Premium cards number within the set ("2/5"); mainline uses a plain number.
-    const fraction = /(\d+)\s*\/\s*(\d+)/.exec(colText);
-    const plainCol = !fraction ? colText.replace(/[^\d]/g, "") : "";
-    const seriesText = plain(get(seriesAt))
-      .split(" · ")
-      .map((part) => part.trim())
-      .filter((part) => part && !/treasure hunt|new for|new model|new casting/i.test(part))
-      .join(" · ");
+    const colFraction = /(\d+)\s*\/\s*(\d+)/.exec(colText);
+    let setPosition =
+      colFraction && Number(colFraction[2]) <= 30 ?
+        `${Number(colFraction[1])}/${Number(colFraction[2])}`
+      : undefined;
+    const plainCol =
+      colFraction ?
+        Number(colFraction[2]) > 30 ? colFraction[1] : ""
+      : colText.replace(/[^\d]/g, "");
+    const seriesParts: string[] = [];
+    for (const raw of plain(get(seriesAt)).split(" · ")) {
+      const part = raw.trim();
+      if (!part || /treasure hunt|new for|new model|new casting/i.test(part)) continue;
+      const position = /^#?\s*(\d+)\s*(?:\/\s*(\d+))?$/.exec(part);
+      if (position) {
+        setPosition ??= position[2] ? `${Number(position[1])}/${Number(position[2])}` : undefined;
+        continue;
+      }
+      seriesParts.push(part);
+    }
+    const seriesText = seriesParts.join(" · ");
     const color = plain(get(colorAt)).split(" · ")[0];
 
     const version: WikiVersion = { name: casting, year };
     if (seriesText) version.series = seriesText.slice(0, 80);
-    if (fraction) version.seriesNumber = `${Number(fraction[1])}/${Number(fraction[2])}`;
+    if (setPosition) version.seriesNumber = setPosition;
     if (plainCol) version.collectorNumber = String(Number(plainCol)).padStart(3, "0");
     if (toy && /^[A-Z0-9]{4,8}$/.test(toy)) version.toyNumber = toy;
     if (color) version.color = color.slice(0, 60);
