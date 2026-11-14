@@ -39,7 +39,7 @@ export function useCatalogue(): Catalogue | null {
 }
 
 type PhotoCar = Pick<Car, "thumbnail" | "photoSource" | "toyNumber" | "year" | "name"> &
-  Partial<Pick<Car, "collectorNumber" | "series" | "seriesNumber">>;
+  Partial<Pick<Car, "collectorNumber" | "series" | "seriesNumber" | "wikiPhoto">>;
 
 /**
  * The catalogue release for a car, with its picture filled in from the live
@@ -49,7 +49,12 @@ type PhotoCar = Pick<Car, "thumbnail" | "photoSource" | "toyNumber" | "year" | "
  */
 export function useCarRelease(car: PhotoCar, given?: Release): Release | undefined {
   const catalogue = useCatalogue();
-  const release = given ?? (catalogue ? releaseForCar(catalogue, car) : undefined);
+  const found = given ?? (catalogue ? releaseForCar(catalogue, car) : undefined);
+  // A premium release picked from the match list carries its own wiki picture.
+  const release =
+    found?.photo || !car.wikiPhoto ? found
+    : found ? { ...found, photo: car.wikiPhoto }
+    : { name: car.name, year: car.year ?? 0, photo: car.wikiPhoto };
   // Asked even behind the owner's own photo, so the car page can offer the
   // catalogue picture instead; answers are remembered, so it is asked once.
   const needsLookup = Boolean(catalogue || given) && !release?.photo;

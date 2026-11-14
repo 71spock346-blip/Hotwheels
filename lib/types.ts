@@ -35,6 +35,12 @@ export interface Car {
    * shows; a scan thumbnail gives way to the catalogue photo when there is one.
    */
   photoSource?: "scan" | "own";
+  /**
+   * Wiki upload path of this release's picture when the shipped catalogue does
+   * not know the release (premium lines picked from the match list). Only the
+   * path is kept; the picture is loaded from the wiki like every catalogue photo.
+   */
+  wikiPhoto?: string;
   notes?: string;
   /** 0-1, how sure the identifier was. Absent for manual entries. */
   confidence?: number;
@@ -92,6 +98,15 @@ export interface Identification {
    * confident match; absent means it was not checked.
    */
   catalogue?: "toy" | "collector" | "name" | null;
+  /** Kind of card the identifier saw: premium lines are not in the shipped catalogue. */
+  line?: "mainline" | "premium" | "other" | null;
+  /** Other castings the car's shape could be, most likely first. */
+  alternatives?: string[];
+  /**
+   * Wiki upload path of the release picked from the match list, for releases
+   * the shipped catalogue does not have (premium lines). A path, not a picture.
+   */
+  photo?: string | null;
   /** Where the card (or loose car) sits in the photo, as fractions of the frame. */
   cardBox?: { x: number; y: number; w: number; h: number } | null;
 }

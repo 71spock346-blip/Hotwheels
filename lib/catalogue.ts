@@ -25,6 +25,8 @@ export interface Release {
   exclusive?: string;
   /** Wiki upload path ("9/95/HTB55.jpg"); see releasePhotoUrl. */
   photo?: string;
+  /** Body colour, known only for releases read live from a casting's wiki page. */
+  color?: string;
 }
 
 interface RawRelease {
@@ -220,7 +222,7 @@ export function looksLikeToyNumber(raw: string): boolean {
   return /[A-Za-z]/.test(cleaned) ? cleaned.length >= 4 : cleaned.length >= 4 && cleaned.length <= 6;
 }
 
-function normaliseName(value: string): string {
+export function normaliseName(value: string): string {
   return value
     .toLowerCase()
     .replace(/\(.*?\)/g, "")
@@ -271,7 +273,7 @@ export interface Resolution {
   by: MatchedBy;
 }
 
-function seriesMatches(a?: string | null, b?: string | null): boolean {
+export function seriesMatches(a?: string | null, b?: string | null): boolean {
   if (!a || !b) return false;
   const x = normaliseName(a).replace(/^hw /, "");
   const y = normaliseName(b).replace(/^hw /, "");

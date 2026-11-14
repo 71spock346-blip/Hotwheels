@@ -49,6 +49,8 @@ Rules for the fields you return:
 - "confidence" is 0 to 1, reflecting how sure you are of the name specifically.
 - "notes" is for anything a collector would want flagged: damaged card, error variant, non-Hot-Wheels brand such as Matchbox or Johnny Lightning, multi-pack. Otherwise empty.
 - Set "isHotWheels" false if the photo is not a die-cast car at all.
+- "line" is the kind of card: "mainline" for the basic long-card singles with a collector number like "112/250"; "premium" for Car Culture, Pop Culture, Boulevard, Team Transport, Fast & Furious premium, Red Line Club and other premium cards with Real Riders tyres and metal bases; "other" for multi-packs, Matchbox, track sets and anything else; empty if you cannot tell.
+- "alternatives" is up to three OTHER casting names this car could be, judged from the shape, proportions and details of the car itself (the toy in the blister, or the car in the card art), most likely first. This matters most when the printed name is small, hidden or unreadable: name the real-world car or casting the body shape matches, written the way Hot Wheels names castings ("'70 Dodge Charger R/T", "Lancia Stratos Zero", "Twin Mill"). Do not repeat "name". Return an empty list if the printed name is clear and nothing else is plausible.
 - "cardBox" is where the blister card (or the loose car, if there is no card) sits in the photo: x and y are the top-left corner and w and h the size, all as fractions of the image from 0 to 1. Be generous — include the whole card — and use the full frame (0, 0, 1, 1) if the card fills the picture or you cannot tell.`;
 
 const SCHEMA = {
@@ -71,6 +73,12 @@ const SCHEMA = {
       description: 'Mattel item code, two letters then three digits, e.g. "HTB29".',
     },
     color: { type: "string", description: "Short description of the body colour." },
+    line: { type: "string", enum: ["mainline", "premium", "other", ""] },
+    alternatives: {
+      type: "array",
+      description: "Up to three other casting names the car's shape could match, most likely first.",
+      items: { type: "string" },
+    },
     treasureHunt: { type: "string", enum: ["none", "th", "sth"] },
     confidence: { type: "number", description: "0 to 1 confidence in the name." },
     notes: { type: "string", description: "Anything notable, or empty." },
@@ -96,6 +104,8 @@ const SCHEMA = {
     "year",
     "toyNumber",
     "color",
+    "line",
+    "alternatives",
     "treasureHunt",
     "confidence",
     "notes",
@@ -322,6 +332,21 @@ function coerce(text: string): Identification | null {
   const hunt: TreasureHunt =
     treasureHunt === "th" || treasureHunt === "sth" ? treasureHunt : "none";
 
+  const line =
+    raw.line === "mainline" || raw.line === "premium" || raw.line === "other" ? raw.line : null;
+  const name = str("name") ?? "";
+  const seenNames = new Set([name.toLowerCase()]);
+  const alternatives = (Array.isArray(raw.alternatives) ? raw.alternatives : [])
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim().slice(0, 80))
+    .filter((value) => {
+      const key = value.toLowerCase();
+      if (!key || seenNames.has(key)) return false;
+      seenNames.add(key);
+      return true;
+    })
+    .slice(0, 3);
+
   const confidence = typeof raw.confidence === "number" ? raw.confidence : 0;
 
   const box = raw.cardBox as Record<string, unknown> | undefined;
@@ -333,7 +358,7 @@ function coerce(text: string): Identification | null {
     : null;
 
   return {
-    name: str("name") ?? "",
+    name,
     series: str("series"),
     seriesNumber: str("seriesNumber"),
     collectorNumber: str("collectorNumber"),
@@ -345,6 +370,8 @@ function coerce(text: string): Identification | null {
     isHotWheels: raw.isHotWheels !== false,
     confidence: Math.min(1, Math.max(0, confidence)),
     notes: str("notes"),
+    line,
+    alternatives,
   };
 }
 

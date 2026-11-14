@@ -1,5 +1,6 @@
 "use client";
 
+import { findMatches, type Match } from "./candidates";
 import { enrichIdentification } from "./catalogue";
 import { allCars, linkUpc, newId, putCar } from "./db";
 import { findMatch, identificationToCar } from "./dedupe";
@@ -59,6 +60,7 @@ export async function commitIdentification(
       photoSource:
         existing.thumbnail ? existing.photoSource : extras.thumbnail ? "scan" : undefined,
       upc: existing.upc ?? extras.upc,
+      wikiPhoto: existing.wikiPhoto ?? identification.photo ?? undefined,
     };
     await putCar(merged);
     await learnUpc(extras.upc, merged);
@@ -109,6 +111,27 @@ export async function identify(
   images: string[],
   upc?: string,
 ): Promise<Identification> {
+  return enrichIdentification(await readCard(images, upc));
+}
+
+/**
+ * Identify a photo and also build the "which one is it?" list: the releases
+ * that fit what was read, best first, with pictures to compare. Same single
+ * paid call as identify(); the list comes from the catalogue and the wiki.
+ */
+export async function identifyWithMatches(
+  images: string[],
+  upc?: string,
+): Promise<{ identification: Identification; matches: Match[] }> {
+  const read = await readCard(images, upc);
+  const identification = await enrichIdentification(read);
+  // Settled by the toy number (a loose car's base, say): nothing to choose.
+  const matches =
+    identification.catalogue === "toy" ? [] : await findMatches(read).catch(() => []);
+  return { identification, matches };
+}
+
+async function readCard(images: string[], upc?: string): Promise<Identification> {
   const response = await fetch("/api/identify", {
     method: "POST",
     headers: { "content-type": "application/json", "x-install-id": installId() },
@@ -129,5 +152,5 @@ export async function identify(
 
   // The photo gives a toy number or a collector number; the catalogue turns
   // that into the whole record, so nothing is left to type in.
-  return enrichIdentification((await response.json()) as Identification);
+  return (await response.json()) as Identification;
 }

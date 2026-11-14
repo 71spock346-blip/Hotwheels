@@ -55,6 +55,7 @@ export function identificationToCar(
     quantity: 1,
     thumbnail: extras.thumbnail,
     photoSource: extras.thumbnail ? "scan" : undefined,
+    wikiPhoto: identification.photo ?? undefined,
     notes: identification.notes ?? undefined,
     confidence: identification.confidence,
     source: extras.source,
