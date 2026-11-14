@@ -30,6 +30,19 @@ feature; this file says where things stand and why they are the way they are.
      identified by Claude. The reply only has to contain a toy number or a
      collector number; the built-in release catalogue fills in the rest.
   4. No barcode: the photo alone is enough.
+  **Front photos end in a pick list ("Which one?").** A front photo can't
+  show the toy number (it is on the back), so instead of one guess the app
+  shows up to five releases that fit, with their wiki pictures, year, colour
+  and series; the collector taps theirs (or "None of these" for the old
+  review form). The identifier also names up to three castings the car's
+  *shape* could be (`alternatives`) and the kind of card (`line`), in the
+  same single paid call. Ranking is in `lib/candidates.ts`: the shipped
+  catalogue first, then, when it has no strong answer or the card is a
+  premium line (Car Culture, Pop Culture, Boulevard... which the catalogue
+  does not cover), `/api/versions` reads the casting's wiki page live for
+  every release and its body colour (`lib/server/versions.ts`, cached 12
+  hours, free). A premium release picked this way keeps its wiki picture
+  path on the car (`wikiPhoto`), never the picture itself.
   Also **Type a code**: type the toy number printed beside the barcode
   (like `HTB29`) and the car comes back complete, at no cost.
 - **Release catalogue.** About 10,750 mainline releases from 1995 onwards,

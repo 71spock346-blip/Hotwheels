@@ -13,7 +13,7 @@ import { createHash } from "node:crypto";
  * photo needs.
  */
 
-const API = process.env.WIKI_API_URL || "https://hotwheels.fandom.com/api.php";
+export const API = process.env.WIKI_API_URL || "https://hotwheels.fandom.com/api.php";
 const TTL_MS = 12 * 60 * 60 * 1000;
 
 export interface WikiRow {
@@ -95,7 +95,7 @@ export function findRow(
 
 /* --------------------------------------------------------------- parse --- */
 
-function plain(cell: string): string {
+export function plain(cell: string): string {
   return cell
     .replace(/\[\[File:[^\]]*\]\]/gi, "")
     .replace(/\[\[([^\]|]*)\|([^\]]*)\]\]/g, "$2")
@@ -116,7 +116,7 @@ function cellBody(raw: string): string {
   return match && /=/.test(match[1]) ? text.slice(match[1].length) : text;
 }
 
-function parseTables(text: string): Array<{ headers: string[]; cells: string[] }> {
+export function parseTables(text: string): Array<{ headers: string[]; cells: string[] }> {
   const rows: Array<{ headers: string[]; cells: string[] }> = [];
   let headers: string[] = [];
   let cells: string[] | null = null;
@@ -158,7 +158,7 @@ function parseTables(text: string): Array<{ headers: string[]; cells: string[] }
   return rows;
 }
 
-function columnIndex(headers: string[], ...names: string[]): number {
+export function columnIndex(headers: string[], ...names: string[]): number {
   return headers.findIndex((header) => names.some((name) => header.replace(/[.\s]/g, "") === name));
 }
 

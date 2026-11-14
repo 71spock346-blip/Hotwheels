@@ -27,11 +27,12 @@ import {
   releaseSubtitle,
   type Release,
 } from "@/lib/catalogue";
+import type { Match } from "@/lib/candidates";
 import {
   addAnother,
   announceChange,
   commitIdentification,
-  identify,
+  identifyWithMatches,
   learnUpc,
 } from "@/lib/commit";
 import { findMatch } from "@/lib/dedupe";
@@ -74,6 +75,19 @@ interface Pending {
   saveError?: string;
   /** A car already in the garage that this identification appears to be. */
   matched?: Car;
+  /** Wiki picture path of a release the shipped catalogue does not know. */
+  wikiPhoto?: string;
+}
+
+/** "Which one is it?" after a front photo: the releases that fit, to pick from. */
+interface MatchSheet {
+  matches: Match[];
+  /** The photo just taken, shown small for comparison. */
+  thumbnail?: string;
+  upc?: string;
+  /** What was read off the card, for the hand-check sheet if none fits. */
+  identification: Identification;
+  fallback: Pending;
 }
 
 const BARCODE_COOLDOWN_MS = 3000;
@@ -103,6 +117,7 @@ export default function ScanPage() {
   const [pending, setPending] = useState<Pending | null>(null);
   const [picker, setPicker] = useState<{ upc: string; cars: Car[] } | null>(null);
   const [candidates, setCandidates] = useState<CandidateSheet | null>(null);
+  const [matchSheet, setMatchSheet] = useState<MatchSheet | null>(null);
   const [torch, setTorch] = useState<{ available: boolean; on: boolean }>({
     available: false,
     on: false,
@@ -134,7 +149,7 @@ export default function ScanPage() {
 
   // A sheet is open, or we are mid-identify: stop reading frames.
   pausedRef.current = Boolean(
-    pending || picker || candidates || busy || typedBarcode !== null,
+    pending || picker || candidates || matchSheet || busy || typedBarcode !== null,
   );
 
   /** Hold a barcode off the auto-capture path for a while. */
@@ -263,7 +278,7 @@ export default function ScanPage() {
 
       setBusy(true);
       try {
-        const identification = await identify([imageDataUrl], upc);
+        const { identification, matches } = await identifyWithMatches([imageDataUrl], upc);
         // Crop the tile to the card the identifier found, not the shelf around it.
         const thumbnail = await makeThumbnail(imageDataUrl, 320, identification.cardBox).catch(
           () => undefined,
@@ -294,7 +309,7 @@ export default function ScanPage() {
           return;
         }
 
-        setPending({
+        const read: Pending = {
           draft: {
             ...BLANK_DRAFT,
             name: identification.name,
@@ -313,7 +328,16 @@ export default function ScanPage() {
           confidence: identification.confidence,
           catalogue: identification.catalogue,
           matched,
-        });
+        };
+
+        // A front photo can't show the toy number, so offer the releases that
+        // fit and let the collector pick, rather than one guess.
+        if (matches.length) {
+          vibrate(30);
+          setMatchSheet({ matches, thumbnail, upc, identification, fallback: read });
+          return;
+        }
+        setPending(read);
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Identification failed.";
@@ -415,6 +439,68 @@ export default function ScanPage() {
         setCandidates(null);
         setArmedUpc(null);
         cooldown(sheet.upc, QUEUED_COOLDOWN_MS);
+        vibrate(30);
+        show(
+          result.wasDuplicate ?
+            `${result.car.name} — now ×${result.car.quantity}`
+          : `Added ${result.car.name}`,
+          "good",
+        );
+      } catch (error) {
+        show(error instanceof Error ? `Could not save: ${error.message}` : "Could not save.", "bad");
+      }
+    },
+    [cooldown, show, forWishlist],
+  );
+
+  /** The collector picked a release from the "which one is it?" list. */
+  const pickMatch = useCallback(
+    async (sheet: MatchSheet, match: Match) => {
+      const { release } = match;
+      const { identification, thumbnail, upc } = sheet;
+      const wikiPhoto = match.live ? release.photo : undefined;
+      if (forWishlist) {
+        const draft = applyRelease(
+          {
+            ...BLANK_DRAFT,
+            color: release.color ?? identification.color ?? undefined,
+            treasureHunt: identification.treasureHunt,
+            upc,
+          },
+          release,
+        );
+        setMatchSheet(null);
+        setPending({
+          draft,
+          thumbnail,
+          upc,
+          confidence: 1,
+          catalogue: match.live ? undefined : "toy",
+          wikiPhoto,
+          matched: findMatch(await allCars(), {
+            toyNumber: draft.toyNumber,
+            name: draft.name,
+            year: draft.year,
+          }),
+        });
+        return;
+      }
+      const picked: Identification = {
+        ...identificationFromRelease(release, {
+          color: release.color ?? identification.color,
+          notes: identification.notes,
+          treasureHunt: identification.treasureHunt,
+        }),
+        photo: wikiPhoto ?? null,
+      };
+      try {
+        const result = await commitIdentification(picked, {
+          upc,
+          thumbnail,
+          source: upc ? "barcode" : "photo",
+        });
+        setMatchSheet(null);
+        cooldown(upc, QUEUED_COOLDOWN_MS);
         vibrate(30);
         show(
           result.wasDuplicate ?
@@ -683,6 +769,7 @@ export default function ScanPage() {
         confidence,
         wanted: true,
         photoSource: thumbnail ? "scan" : undefined,
+        wikiPhoto: pending.wikiPhoto,
         source: upc ? "barcode" : "photo",
         addedAt: now,
         updatedAt: now,
@@ -777,6 +864,7 @@ export default function ScanPage() {
       upc,
       confidence,
       photoSource: thumbnail ? "scan" : undefined,
+      wikiPhoto: pending.wikiPhoto,
       source:
         upc ? "barcode"
         : thumbnail ? "photo"
@@ -1140,6 +1228,88 @@ export default function ScanPage() {
         </div>
       )}
 
+      {matchSheet && (
+        <div className="sheet-backdrop">
+          <div className="sheet" role="dialog" aria-labelledby="match-title">
+            <h2 id="match-title">Which one?</h2>
+            <div className="match-intro">
+              {matchSheet.thumbnail && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img className="match-yours" src={matchSheet.thumbnail} alt="Your photo" />
+              )}
+              <p>
+                {matchSheet.matches.length === 1 ?
+                  "This is the closest match. Tap it if it's your car."
+                : "These fit your card best. Tap the one that matches your car."}
+              </p>
+            </div>
+            <div className="tiles match-tiles">
+              {matchSheet.matches.map((match, index) => {
+                const { release } = match;
+                const facts = [
+                  release.year,
+                  release.color,
+                  release.series &&
+                    `${release.series}${release.seriesNumber ? ` ${release.seriesNumber}` : ""}`,
+                ]
+                  .filter(Boolean)
+                  .join(" · ");
+                return (
+                  <button
+                    key={`${release.toyNumber ?? ""}-${release.year}-${index}`}
+                    type="button"
+                    className="tile match-tile"
+                    onClick={() => void pickMatch(matchSheet, match)}
+                  >
+                    {index === 0 && <span className="match-best">Best match</span>}
+                    <CarPhoto
+                      car={{ name: release.name, toyNumber: release.toyNumber, year: release.year }}
+                      release={release}
+                      className="tile-photo match-photo"
+                      width={480}
+                    />
+                    <span className="tile-name">
+                      {release.name}
+                      {release.treasureHunt === "th" && <span className="badge badge-th">TH</span>}
+                      {release.treasureHunt === "sth" && <span className="badge badge-sth">$TH</span>}
+                    </span>
+                    {facts && <span className="tile-meta match-meta">{facts}</span>}
+                    <span className="match-pick">This one ›</span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="muted small match-credit">
+              Pictures from the Hot Wheels Wiki, loaded from their site.
+            </p>
+            <div className="sheet-actions">
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  const { fallback, upc } = matchSheet;
+                  setMatchSheet(null);
+                  cooldown(upc, SUPPRESS_MS);
+                  setPending(fallback);
+                }}
+              >
+                None of these
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => {
+                  cooldown(matchSheet.upc, SUPPRESS_MS);
+                  setMatchSheet(null);
+                }}
+              >
+                Discard
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {pending && (
         <div className="sheet-backdrop">
           <div className="sheet">
@@ -1160,6 +1330,7 @@ export default function ScanPage() {
                 seriesNumber: pending.draft.seriesNumber,
                 year: pending.draft.year,
                 thumbnail: pending.thumbnail,
+                wikiPhoto: pending.wikiPhoto,
               }}
               className="sheet-photo"
               width={640}
