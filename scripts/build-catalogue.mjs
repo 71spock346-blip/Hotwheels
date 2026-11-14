@@ -130,7 +130,10 @@ function toRelease(year, headers, cells) {
 
   const photoAt = columnIndex(headers, "photo", "image", "picture");
   const photoMatch = /\[\[(?:File|Image):([^\]|]+)/i.exec(photoAt >= 0 ? get(photoAt) : cells.join("\n"));
-  const photo = photoMatch ? imagePath(photoMatch[1]) : undefined;
+  // The wiki fills rows it has no picture for yet with a stock "Image Not
+  // Available" upload; showing that would hide the owner's own photo.
+  const photo =
+    photoMatch && !/not[\s_]*available/i.test(photoMatch[1]) ? imagePath(photoMatch[1]) : undefined;
 
   const rawSeries = get(seriesAt);
   const seriesText = plain(rawSeries);

@@ -4,10 +4,10 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import CarFields, { draftFromCar, type CarDraft } from "@/components/CarFields";
-import CarPhoto, { choosePhoto, useCatalogue } from "@/components/CarPhoto";
+import CarPhoto, { choosePhoto, useCarRelease } from "@/components/CarPhoto";
 import CatalogueHint from "@/components/CatalogueHint";
 import { CameraIcon, ChevronLeftIcon, GalleryIcon } from "@/components/icons";
-import { releaseForCar, releasePhotoPage } from "@/lib/catalogue";
+import { releasePhotoPage } from "@/lib/catalogue";
 import { prefersOwnPhotos } from "@/lib/prefs";
 import { Toast, useToast } from "@/components/Toast";
 import { announceChange } from "@/lib/commit";
@@ -21,7 +21,6 @@ export default function CarPage() {
   const router = useRouter();
   const { toast, show } = useToast();
 
-  const catalogue = useCatalogue();
   const [car, setCar] = useState<Car | null>(null);
   const [draft, setDraft] = useState<CarDraft | null>(null);
   const [loading, setLoading] = useState(true);
@@ -96,6 +95,9 @@ export default function CarPage() {
     }
   }
 
+  // A hook, so it sits above the early returns; a blank car looks nothing up.
+  const release = useCarRelease(car ?? { name: "" });
+
   if (loading) {
     return (
       <main className="shell">
@@ -133,7 +135,6 @@ export default function CarPage() {
       </header>
 
       {(() => {
-        const release = catalogue ? releaseForCar(catalogue, car) : undefined;
         const chosen = choosePhoto(car, release, prefersOwnPhotos(), 640);
         const page = release ? releasePhotoPage(release) : null;
         // Size the name so its longest word fills the width without breaking.
