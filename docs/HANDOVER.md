@@ -35,12 +35,25 @@ feature; this file says where things stand and why they are the way they are.
 - **Release catalogue.** About 10,750 mainline releases from 1995 onwards,
   built from the Hot Wheels Wiki, shipped with the app and cached for
   offline use. Almost every release has a photo link.
-- **Catalogue photos.** A car matched by toy number shows the wiki's photo
-  of that exact release, in the garage and on its own page. A photo the
-  owner takes on a car's page always takes precedence.
+- **Catalogue photos.** A car matched to its release (by toy number, or
+  failing that by collector number, series or a name that is unique in its
+  year) shows the wiki's photo of that exact release, on a white plate, in
+  the garage, on its own page and in the scan review sheet. A photo the
+  owner takes on a car's page always takes precedence. The wiki's stock
+  "Image Not Available" picture is treated as no photo. When the shipped
+  catalogue has no picture yet (common for the newest cars), the phone asks
+  `/api/photo`, which reads that year's list on the wiki live (cached 12
+  hours on the server) and returns just the file path; the phone remembers
+  the path (`lib/livePhoto.ts`, localStorage) and asks again after two days
+  if nothing was found. Set `WIKI_API_URL` to point it at a mock in tests.
+- **Garage views.** Big-picture grid (default) or compact list, switched
+  beside the search box; the choice is remembered on the phone.
 - **Collection.** Garage list with search and filters (duplicates, hunts,
   wishlist), duplicates counted as ×N, wishlist (scanning a wanted car
-  moves it into the garage), series completion ("3/10 still hunting"),
+  moves it into the garage; Wishlist → **Snap a car you want** opens the
+  camera in wishlist mode, `/scan?for=wishlist`, where every path ends at
+  the review sheet and saves as a wish, never to the garage on a barcode
+  alone), series completion ("3/10 still hunting"),
   rough value estimates, CSV export, JSON backup and restore.
 - **Keeping the collection.** The app asks the browser for persistent
   storage (`navigator.storage.persist()`, in `components/StorageGuard.tsx`)

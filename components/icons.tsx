@@ -183,3 +183,26 @@ export function CarIcon(props: IconProps) {
     </Icon>
   );
 }
+
+/** Garage view switch: big pictures. */
+export function GridIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect x="4" y="4" width="6.5" height="6.5" rx="1.5" />
+      <rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5" />
+      <rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5" />
+      <rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5" />
+    </Icon>
+  );
+}
+
+/** Garage view switch: compact rows. */
+export function ListIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect x="4" y="5" width="4" height="4" rx="1" />
+      <rect x="4" y="15" width="4" height="4" rx="1" />
+      <path d="M11 7h9M11 17h9" />
+    </Icon>
+  );
+}

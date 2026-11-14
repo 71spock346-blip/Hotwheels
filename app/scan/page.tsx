@@ -120,6 +120,18 @@ export default function ScanPage() {
 
   const { toast, show } = useToast();
 
+  /**
+   * Opened from the wishlist ("Snap a car you want"): everything that would
+   * add to the garage instead ends at the review sheet, saving as a wish.
+   */
+  const [forWishlist, setForWishlist] = useState(false);
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("for") === "wishlist") {
+      setForWishlist(true);
+      setMode("confirm");
+    }
+  }, []);
+
   // A sheet is open, or we are mid-identify: stop reading frames.
   pausedRef.current = Boolean(
     pending || picker || candidates || busy || typedBarcode !== null,
@@ -347,14 +359,43 @@ export default function ScanPage() {
       upc,
       title: "Seen this barcode before",
       intro:
-        "Other collectors confirmed these cars behind this barcode. Tap yours to add it — no photo needed.",
+        forWishlist ?
+          "Other collectors confirmed these cars behind this barcode. Tap the one you want."
+        : "Other collectors confirmed these cars behind this barcode. Tap yours to add it — no photo needed.",
       items,
     });
-  }, []);
+  }, [forWishlist]);
 
   /** Save a candidate as-is: complete from the catalogue, no identification cost. */
   const pickCandidate = useCallback(
     async (sheet: CandidateSheet, item: Candidate) => {
+      if (forWishlist) {
+        // A wish is reviewed before it is saved, like every wishlist add.
+        const draft =
+          item.release ?
+            applyRelease({ ...BLANK_DRAFT, upc: sheet.upc }, item.release)
+          : {
+              ...BLANK_DRAFT,
+              name: item.name,
+              toyNumber: item.toyNumber,
+              year: item.year,
+              upc: sheet.upc,
+            };
+        setCandidates(null);
+        setArmedUpc(null);
+        setPending({
+          draft,
+          upc: sheet.upc,
+          confidence: 1,
+          catalogue: item.release ? "toy" : undefined,
+          matched: findMatch(await allCars(), {
+            toyNumber: draft.toyNumber,
+            name: draft.name,
+            year: draft.year,
+          }),
+        });
+        return;
+      }
       const identification: Identification =
         item.release ?
           identificationFromRelease(item.release)
@@ -385,7 +426,7 @@ export default function ScanPage() {
         show(error instanceof Error ? `Could not save: ${error.message}` : "Could not save.", "bad");
       }
     },
-    [cooldown, show],
+    [cooldown, show, forWishlist],
   );
 
   /* ------------------------------------------------------ barcode loop --- */
@@ -400,7 +441,9 @@ export default function ScanPage() {
       if (seenAt && now - seenAt < BARCODE_COOLDOWN_MS) return;
       recentBarcodes.current.set(upc, now);
 
-      const known = await carsForUpc(upc);
+      // Wishing never adds to the garage on a barcode alone: one barcode covers
+      // a whole assortment, so the photo of the front decides which car it is.
+      const known = forWishlist ? [] : await carsForUpc(upc);
 
       if (known.length === 1) {
         const taken = await addAnother(known[0]);
@@ -429,7 +472,7 @@ export default function ScanPage() {
       armedRef.current = upc;
       void offerShared(upc);
     },
-    [show, offerShared],
+    [show, offerShared, forWishlist],
   );
 
   useEffect(() => {
@@ -544,7 +587,7 @@ export default function ScanPage() {
     }
     setTypedBarcode(null);
 
-    const known = await carsForUpc(upc);
+    const known = forWishlist ? [] : await carsForUpc(upc);
     if (known.length === 1) {
       const taken = await addAnother(known[0]);
       show(
@@ -571,7 +614,7 @@ export default function ScanPage() {
     // can be filled in by hand, and remember the barcode against the result.
     setArmedUpc(null);
     setPending({ draft: { ...BLANK_DRAFT, upc }, upc });
-  }, [typedBarcode, show, offerShared]);
+  }, [typedBarcode, show, offerShared, forWishlist]);
 
   const toggleTorch = useCallback(async () => {
     const track = streamRef.current?.getVideoTracks()[0];
@@ -610,8 +653,17 @@ export default function ScanPage() {
       color: draft.color,
     });
 
-    // Wishing for a car already on the wishlist just freshens its details;
-    // wishing for one already owned is caught before the button is shown.
+    // Wishing for one already owned would quietly add it to the garage below.
+    if (asWishlist && existing && !existing.wanted) {
+      setPending({
+        ...pending,
+        matched: existing,
+        saveError: `${existing.name} is already in your garage, so it can't go on the wishlist.`,
+      });
+      return;
+    }
+
+    // Wishing for a car already on the wishlist just freshens its details.
     if (asWishlist && !existing) {
       const wish: Car = {
         id: newId(),
@@ -760,9 +812,9 @@ export default function ScanPage() {
       <header className="topbar">
         <div className="wordmark">
           <FlameMark className="flame" />
-          Scan
+          {forWishlist ? "Wishlist" : "Scan"}
         </div>
-        <Link href="/" className="btn btn-ghost">
+        <Link href={forWishlist ? "/?show=wishlist" : "/"} className="btn btn-ghost">
           Done
         </Link>
       </header>
@@ -801,6 +853,7 @@ export default function ScanPage() {
                 `Barcode ${armedUpc} — now the front, then the shutter`
               : liveBarcode ? `Barcode ${liveBarcode}`
               : status === "starting" ? "Starting camera…"
+              : forWishlist ? "Snap the car you want, card or loose"
               : "Barcode on the back, or the shutter on the front"}
             </div>
           </div>
@@ -863,7 +916,16 @@ export default function ScanPage() {
             </button>
           </div>
 
-          <div className="card" style={{ marginTop: 4 }}>
+          {forWishlist ?
+            <div className="card" style={{ marginTop: 4 }}>
+              <p className="muted small" style={{ margin: 0, lineHeight: 1.45 }}>
+                You&rsquo;re adding to the wishlist. Snap a car in a shop, a
+                friend&rsquo;s collection or a photo on a screen; you&rsquo;ll
+                see what it is before anything is saved. Buy it later and scan
+                it as usual: it moves from the wishlist into the garage.
+              </p>
+            </div>
+          : <div className="card" style={{ marginTop: 4 }}>
             <div className="segmented" style={{ marginBottom: 10 }}>
               <button
                 type="button"
@@ -887,6 +949,7 @@ export default function ScanPage() {
               }
             </p>
           </div>
+          }
 
           <p className="muted tiny" style={{ marginTop: 14, lineHeight: 1.5 }}>
             A barcode you have scanned before adds instantly, and one other
@@ -1085,6 +1148,23 @@ export default function ScanPage() {
                 (pending.error ? "Add it by hand" : "Add by hand")}
             </h2>
 
+            {/* The car itself, from the catalogue when it knows it, so you
+                can see at a glance that this is the right one. */}
+            <CarPhoto
+              key={`${pending.draft.toyNumber ?? ""}|${pending.draft.year ?? ""}|${pending.draft.name}`}
+              car={{
+                name: pending.draft.name,
+                toyNumber: pending.draft.toyNumber,
+                collectorNumber: pending.draft.collectorNumber,
+                series: pending.draft.series,
+                seriesNumber: pending.draft.seriesNumber,
+                year: pending.draft.year,
+                thumbnail: pending.thumbnail,
+              }}
+              className="sheet-photo"
+              width={640}
+            />
+
             {pending.error && (
               <p className="notice notice-bad" role="alert">
                 {pending.errorCode === "quota_exhausted" ?
@@ -1104,7 +1184,16 @@ export default function ScanPage() {
 
             {pending.matched && (
               <p className="notice notice-good">
-                {pending.matched.wanted ?
+                {forWishlist ?
+                  pending.matched.wanted ?
+                    <>
+                      <b>{pending.matched.name}</b> is already on your wishlist.
+                    </>
+                  : <>
+                      You already have <b>{pending.matched.name}</b> in the garage
+                      (×{pending.matched.quantity}).
+                    </>
+                : pending.matched.wanted ?
                   <>
                     <b>{pending.matched.name}</b> is on your wishlist! Saving
                     marks it found and moves it into the garage.
@@ -1160,31 +1249,75 @@ export default function ScanPage() {
               </p>
             )}
 
-            <div className="sheet-actions">
-              <button type="button" className="btn btn-primary" onClick={() => void savePending()}>
-                Save to garage
-              </button>
-              <button
-                type="button"
-                className="btn btn-ghost"
-                onClick={() => {
-                  cooldown(pending.upc, SUPPRESS_MS);
-                  setPending(null);
-                }}
-              >
-                Discard
-              </button>
-            </div>
-            {!pending.matched && (
-              <button
-                type="button"
-                className="btn btn-ghost btn-block"
-                style={{ marginTop: 10 }}
-                onClick={() => void savePending(true)}
-              >
-                Don&rsquo;t own it yet — add to wishlist
-              </button>
-            )}
+            {forWishlist ?
+              <>
+                <div className="sheet-actions">
+                  {pending.matched && !pending.matched.wanted ?
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={() => void savePending()}
+                    >
+                      Add another to the garage
+                    </button>
+                  : <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={() => void savePending(true)}
+                    >
+                      Add to wishlist
+                    </button>
+                  }
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    onClick={() => {
+                      cooldown(pending.upc, SUPPRESS_MS);
+                      setPending(null);
+                    }}
+                  >
+                    Discard
+                  </button>
+                </div>
+                {!pending.matched && (
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-block"
+                    style={{ marginTop: 10 }}
+                    onClick={() => void savePending()}
+                  >
+                    I already have it — save to garage
+                  </button>
+                )}
+              </>
+            : <>
+                <div className="sheet-actions">
+                  <button type="button" className="btn btn-primary" onClick={() => void savePending()}>
+                    Save to garage
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    onClick={() => {
+                      cooldown(pending.upc, SUPPRESS_MS);
+                      setPending(null);
+                    }}
+                  >
+                    Discard
+                  </button>
+                </div>
+                {!pending.matched && (
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-block"
+                    style={{ marginTop: 10 }}
+                    onClick={() => void savePending(true)}
+                  >
+                    Don&rsquo;t own it yet — add to wishlist
+                  </button>
+                )}
+              </>
+            }
           </div>
         </div>
       )}

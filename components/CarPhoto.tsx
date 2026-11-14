@@ -10,13 +10,15 @@ import {
   type Catalogue,
   type Release,
 } from "@/lib/catalogue";
+import { useLivePhoto } from "@/lib/livePhoto";
 import { PREFS_CHANGED, prefersOwnPhotos } from "@/lib/prefs";
 import type { Car } from "@/lib/types";
 
 /**
  * The picture for a car, chosen in this order: a photo the owner took on
- * purpose; the catalogue's photo of that exact release; the scan thumbnail;
- * a silhouette. The catalogue photo is loaded from the wiki and, if it fails
+ * purpose; the catalogue's photo of that exact release (looked up live on the
+ * wiki when the shipped catalogue has none yet); the scan thumbnail; a
+ * silhouette. The catalogue photo is loaded from the wiki and, if it fails
  * (offline, removed), the scan quietly takes its place.
  */
 export function useCatalogue(): Catalogue | null {
@@ -34,6 +36,34 @@ export function useCatalogue(): Catalogue | null {
     };
   }, [catalogue]);
   return catalogue;
+}
+
+type PhotoCar = Pick<Car, "thumbnail" | "photoSource" | "toyNumber" | "year" | "name"> &
+  Partial<Pick<Car, "collectorNumber" | "series" | "seriesNumber">>;
+
+/**
+ * The catalogue release for a car, with its picture filled in from the live
+ * wiki lookup when the shipped catalogue has none. When the catalogue has no
+ * release at all (a car newer than the catalogue), a found picture comes back
+ * as a bare release so the photo still shows.
+ */
+export function useCarRelease(car: PhotoCar, given?: Release): Release | undefined {
+  const catalogue = useCatalogue();
+  const release = given ?? (catalogue ? releaseForCar(catalogue, car) : undefined);
+  // Asked even behind the owner's own photo, so the car page can offer the
+  // catalogue picture instead; answers are remembered, so it is asked once.
+  const needsLookup = Boolean(catalogue || given) && !release?.photo;
+  const live = useLivePhoto(
+    {
+      name: release?.name ?? car.name,
+      year: release?.year ?? car.year,
+      toyNumber: release?.toyNumber ?? car.toyNumber,
+      collectorNumber: release?.collectorNumber ?? car.collectorNumber,
+    },
+    needsLookup,
+  );
+  if (release?.photo || !live) return release;
+  return release ? { ...release, photo: live } : { name: car.name, year: car.year ?? 0, photo: live };
 }
 
 function usePreferOwn(): boolean {
@@ -69,18 +99,17 @@ export default function CarPhoto({
   width = 320,
   style,
 }: {
-  car: Pick<Car, "thumbnail" | "photoSource" | "toyNumber" | "year" | "name">;
+  car: PhotoCar;
   /** Pass the release when it is already known (pick lists); otherwise looked up. */
   release?: Release;
   className?: string;
   width?: number;
   style?: React.CSSProperties;
 }) {
-  const catalogue = useCatalogue();
   const preferOwn = usePreferOwn();
   const [failed, setFailed] = useState<string | null>(null);
 
-  const release = givenRelease ?? (catalogue ? releaseForCar(catalogue, car) : undefined);
+  const release = useCarRelease(car, givenRelease);
   let { src, source } = choosePhoto(car, release, preferOwn, width);
   if (src && failed === src) {
     // The wiki image did not load: fall back to whatever the device has.

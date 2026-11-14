@@ -113,8 +113,13 @@ function fromRaw(raw: RawRelease): Release {
   if (raw.sn) release.seriesNumber = raw.sn;
   if (raw.th) release.treasureHunt = raw.th;
   if (raw.x) release.exclusive = raw.x;
-  if (raw.p) release.photo = raw.p;
+  if (raw.p && !isPlaceholderPhoto(raw.p)) release.photo = raw.p;
   return release;
+}
+
+/** The wiki's stock "Image Not Available" upload: a grey card, not the car. */
+export function isPlaceholderPhoto(path: string): boolean {
+  return /not[\s_]*available/i.test(path);
 }
 
 /**
@@ -136,15 +141,51 @@ export function releasePhotoPage(release: Pick<Release, "photo">): string | null
   return `https://hotwheels.fandom.com/wiki/File:${encodeURIComponent(name)}`;
 }
 
-/** The catalogue release a saved car corresponds to, by its toy number. */
+/**
+ * The catalogue release a saved car corresponds to. The toy number settles it;
+ * a car saved without one (typed by hand, or a photo the identifier could only
+ * half read) is pinned by collector number, series or name the same careful
+ * way a scan is, and anything ambiguous stays unmatched.
+ */
 export function releaseForCar(
   catalogue: Catalogue,
-  car: { toyNumber?: string | null; year?: number | null },
+  car: {
+    toyNumber?: string | null;
+    year?: number | null;
+    name?: string;
+    collectorNumber?: string | null;
+    series?: string | null;
+    seriesNumber?: string | null;
+  },
 ): Release | undefined {
-  if (!car.toyNumber) return undefined;
-  const releases = lookupToyNumber(catalogue, car.toyNumber);
-  return releases.find((release) => release.year === car.year) ?? releases[0];
+  if (car.toyNumber) {
+    const releases = lookupToyNumber(catalogue, car.toyNumber);
+    const found = releases.find((release) => release.year === car.year) ?? releases[0];
+    if (found) return found;
+  }
+  if (!car.name && !car.collectorNumber) return undefined;
+  // Every list row asks, so remember the answer rather than rescanning the
+  // whole catalogue by name on each render.
+  const key = [car.name, car.collectorNumber, car.year, car.series, car.seriesNumber].join("|");
+  let memo = looseMatches.get(catalogue);
+  if (!memo) looseMatches.set(catalogue, (memo = new Map()));
+  if (memo.has(key)) return memo.get(key);
+  const found = resolveIdentification(catalogue, {
+    toyNumber: null,
+    collectorNumber: car.collectorNumber ?? null,
+    name: car.name ?? "",
+    year: car.year ?? null,
+    series: car.series ?? null,
+    seriesNumber: car.seriesNumber ?? null,
+  })?.release;
+  // Another year's release of the casting is usually another colour: no match
+  // beats showing the wrong car.
+  const result = found && (!car.year || found.year === car.year) ? found : undefined;
+  memo.set(key, result);
+  return result;
 }
+
+const looseMatches = new WeakMap<Catalogue, Map<string, Release | undefined>>();
 
 /* ------------------------------------------------------------- keys --- */
 
