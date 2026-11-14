@@ -1011,6 +1011,8 @@ html[data-splash="1"] .splash {
 /* Notices used inside sheets and forms. */
 
 .notice {
+  position: relative;
+  z-index: 1;
   margin: 8px 0 12px;
   padding: 11px 13px;
   border-radius: 12px;
@@ -1102,9 +1104,15 @@ html[data-splash="1"] .splash {
   isolation: isolate;
 }
 
+/* The back plane is scenery: taps fall through it and it can't be selected.
+   The huge numerals' glyphs reach far above their box, and on Android a tap
+   on whatever sits just above (the backup reminder) used to land on them. */
 .stage-back {
   position: relative;
   z-index: 0;
+  pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .stage-back .display {
